@@ -1,0 +1,9 @@
+.netrwhist
+tags
+tags-*
+*.pyc
+.DS_Store
+.com.apple.*
+*.sw[ponm]
+*.add.spl
+xell_test.vim
