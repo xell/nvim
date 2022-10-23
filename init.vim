@@ -1,6 +1,5 @@
-
 if exists('g:vscode')
-    let g:test = 1
+    let g:nvimapp = 1
     " https://github.com/vscode-neovim/vscode-neovim/issues/259
     " nmap j gj
     " nmap k gk
@@ -41,7 +40,7 @@ if exists('g:vscode')
     endfunction
     map <C-CR> :call ToggleMaximizeEditor()<CR>
 else
-    let g:test = 0
+    let g:nvimapp = 0
     nnoremap j gj
     nnoremap k gk
     set number
@@ -53,6 +52,11 @@ map - $
 map <C-j> <C-f>
 map <C-k> <C-b>
 
+vmap <D-c> "+y
+map  <D-v> x"+gP
+cmap <D-v> <C-R>+
+imap <D-v> <C-R><C-O>+
+
 nmap <Leader>ns :let @/=""<CR>
 nmap <Leader>nh :set nohlsearch<CR>
 nmap <Leader>h :set hlsearch<CR>
@@ -61,6 +65,9 @@ nmap <Leader>v :vsplit<CR>
 nmap <Leader>c <C-W>c
 nmap <Backspace> <C-W>p
 nmap ` <C-W>w
+
+vmap <D-d> "zy:silent! !open "https://www.google.com/search?q="$(php -r "echo rawurlencode('<C-R>z');")<CR>
+map <D-d> :silent !open "dict://<cword>"<CR>
 
 " https://github.com/ybian/smartim
 let g:smartim_default = 'com.apple.keylayout.ABC'
