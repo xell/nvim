@@ -40,7 +40,7 @@ if exists('g:vscode')
     endfunction
     map <C-CR> :call ToggleMaximizeEditor()<CR>
 
-    let s:switch_recently_used_editor = 1
+    let s:switch_recently_used_editor = 0
     function SwitchRecentlyUsedEditor() abort
         if (s:switch_recently_used_editor)
             call VSCodeNotify('workbench.action.openPreviousRecentlyUsedEditor')
@@ -87,3 +87,44 @@ let g:smartim_default = 'com.apple.keylayout.ABC'
 " unlet g:smartim_disable
 " autocmd InsertLeave * :silent !/usr/local/bin/im-select com.apple.keylayout.ABC
 " autocmd UIEnter * set noimd
+
+call plug#begin()
+" https://github.com/junegunn/vim-plug
+" The default plugin directory will be as follows:
+"   - Vim (Linux/macOS): '~/.vim/plugged'
+"   - Vim (Windows): '~/vimfiles/plugged'
+"   - Neovim (Linux/macOS/Windows): stdpath('data') . '/plugged'
+" You can specify a custom plugin directory by passing it as the argument
+"   - e.g. `call plug#begin('~/.vim/plugged')`
+"   - Avoid using standard Vim directory names like 'plugin'
+
+" Make sure you use single quotes
+
+"  https://github.com/vscode-neovim/vscode-neovim/wiki/Plugins#vim-easymotion
+"  https://www.v2ex.com/t/856921
+"  Plug 'easymotion/vim-easymotion'
+Plug 'asvetliakov/vim-easymotion'
+Plug 'zzhirong/vim-easymotion-zh'
+
+" Initialize plugin system
+" - Automatically executes `filetype plugin indent on` and `syntax enable`.
+call plug#end()
+" You can revert the settings after the call like so:
+"   filetype indent off   " Disable file-type-specific indentation
+"   syntax off            " Disable syntax highlighting
+
+let g:EasyMotion_leader_key=";"
+let g:EasyMotion_skipfoldedline=0
+let g:EasyMotion_space_jump_first=1
+let g:EasyMotion_move_highlight = 0
+let g:EasyMotion_use_migemo = 1
+noremap s <Plug>(easymotion-overwin-f2)
+" `s` 和 surround 冲突, 比如 ds
+onoremap z <Plug>(easymotion-f2)
+noremap f <Plug>(easymotion-fl)
+noremap F <Plug>(easymotion-Fl)
+noremap t <Plug>(easymotion-tl)
+noremap T <Plug>(easymotion-Tl)
+noremap ;. <Plug>(easymotion-repeat)
+noremap ;l <Plug>(easymotion-next)
+noremap ;h <Plug>(easymotion-prev)
