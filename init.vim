@@ -51,6 +51,7 @@ if exists('g:vscode')
         endif
     endfunction
     nnoremap <Backspace> <Cmd>call SwitchRecentlyUsedEditor()<CR>
+    nnoremap $ <Cmd>call VSCodeNotify('workbench.action.focusOtherSideEditor')<CR>
 else
     let g:nvimapp = 0
     nnoremap j gj
@@ -58,6 +59,8 @@ else
     nmap <Backspace> <C-W>p
     set number
 endif
+
+set ignorecase smartcase
 
 let mapleader = ","
 
