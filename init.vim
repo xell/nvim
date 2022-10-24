@@ -78,8 +78,15 @@ nmap <Leader>v :vsplit<CR>
 nmap <Leader>c <C-W>c
 nmap ` <C-W>w
 
-vmap <D-d> "zy:silent! !open "https://www.google.com/search?q="$(php -r "echo rawurlencode('<C-R>z');")<CR>
-map <D-d> :silent !open "dict://<cword>"<CR>
+"  vmap <D-d> "zy:silent! !open "https://www.google.com/search?q="$(php -r "echo rawurlencode('<C-R>z');")<CR>
+"  vmap <D-d> "zy:silent! !open "https://www.google.com/search?q="$(php -r "echo rawurlencode('@z');")<CR>
+vmap <D-d> "zy:call <SID>google()<CR>
+nmap <D-d> :silent !open "dict://<cword>"<CR>
+function s:google()
+    let word = @z
+    let word = system('/usr/local/bin/php -r "echo rawurlencode(' . "'" . word . "'" . ');"')
+    exec 'silent! !open "https://www.google.com/search?q=' . shellescape(word, 1) . '"'
+endfunction
 
 " https://github.com/ybian/smartim
 let g:smartim_default = 'com.apple.keylayout.ABC'
@@ -118,9 +125,9 @@ let g:EasyMotion_skipfoldedline=0
 let g:EasyMotion_space_jump_first=1
 let g:EasyMotion_move_highlight = 0
 let g:EasyMotion_use_migemo = 1
-noremap s <Plug>(easymotion-overwin-f2)
+"  noremap s <Plug>(easymotion-overwin-f2)
 " `s` 和 surround 冲突, 比如 ds
-onoremap z <Plug>(easymotion-f2)
+"  onoremap z <Plug>(easymotion-f2)
 noremap f <Plug>(easymotion-fl)
 noremap F <Plug>(easymotion-Fl)
 noremap t <Plug>(easymotion-tl)
