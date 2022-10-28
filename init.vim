@@ -1,21 +1,19 @@
 if exists('g:vscode')
     let g:nvimapp = 1
-    " https://github.com/vscode-neovim/vscode-neovim/issues/259
-    " nmap j gj
-    " nmap k gk
     " https://github.com/vscode-neovim/vscode-neovim/issues/58
-    nmap zM :call VSCodeNotify('editor.foldAll')<CR>
-    nmap zR :call VSCodeNotify('editor.unfoldAll')<CR>
-    nmap zc :call VSCodeNotify('editor.fold')<CR>
-    nmap zC :call VSCodeNotify('editor.foldRecursively')<CR>
-    nmap zo :call VSCodeNotify('editor.unfold')<CR>
-    nmap zO :call VSCodeNotify('editor.unfoldRecursively')<CR>
-    nmap za :call VSCodeNotify('editor.toggleFold')<CR>
-    nmap <Space> :call VSCodeNotify('editor.toggleFold')<CR>
-    nmap zj :call VSCodeNotify('editor.gotoNextFold')<CR>
-    nmap zk :call VSCodeNotify('editor.gotoPreviousFold')<CR>
-    nmap zK :call VSCodeNotify('editor.gotoParentFold')<CR>
+    nnoremap zM :call VSCodeNotify('editor.foldAll')<CR>
+    nnoremap zR :call VSCodeNotify('editor.unfoldAll')<CR>
+    nnoremap zc :call VSCodeNotify('editor.fold')<CR>
+    nnoremap zC :call VSCodeNotify('editor.foldRecursively')<CR>
+    nnoremap zo :call VSCodeNotify('editor.unfold')<CR>
+    nnoremap zO :call VSCodeNotify('editor.unfoldRecursively')<CR>
+    nnoremap za :call VSCodeNotify('editor.toggleFold')<CR>
+    nnoremap <Space> :call VSCodeNotify('editor.toggleFold')<CR>
+    nnoremap zj :call VSCodeNotify('editor.gotoNextFold')<CR>
+    nnoremap zk :call VSCodeNotify('editor.gotoPreviousFold')<CR>
+    nnoremap zK :call VSCodeNotify('editor.gotoParentFold')<CR>
 
+    " https://github.com/vscode-neovim/vscode-neovim/issues/259
     function! MoveCursor(direction) abort
         if(reg_recording() == '' && reg_executing() == '')
             return 'g'.a:direction
@@ -23,7 +21,6 @@ if exists('g:vscode')
             return a:direction
         endif
     endfunction
-
     nmap <expr> j MoveCursor('j')
     nmap <expr> k MoveCursor('k')
 
