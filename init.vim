@@ -55,6 +55,11 @@ else
     nnoremap k gk
     nmap <Backspace> <C-W>p
     set number
+    au VimEnter,VimResume * set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
+			    \,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor
+			    \,sm:block-blinkwait175-blinkoff150-blinkon175
+
+    au VimLeave,VimSuspend * set guicursor=a:hor20-blinkon0
 endif
 
 set ignorecase smartcase
@@ -109,8 +114,11 @@ call plug#begin()
 
 "  https://github.com/vscode-neovim/vscode-neovim/wiki/Plugins#vim-easymotion
 "  https://www.v2ex.com/t/856921
-"  Plug 'easymotion/vim-easymotion'
-Plug 'asvetliakov/vim-easymotion'
+if exists('g:vscode')
+	Plug 'asvetliakov/vim-easymotion', {'rtp': 'vscode'}
+else
+	Plug 'easymotion/vim-easymotion', {'rtp': 'nvim'}
+endif
 Plug 'zzhirong/vim-easymotion-zh'
 
 " Initialize plugin system
