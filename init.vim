@@ -37,7 +37,7 @@ if exists('g:vscode')
     endfunction
     map <C-CR> :call ToggleMaximizeEditor()<CR>
 
-    let s:switch_recently_used_editor = 0
+    let s:switch_recently_used_editor = 1
     function SwitchRecentlyUsedEditor() abort
         if (s:switch_recently_used_editor)
             call VSCodeNotify('workbench.action.openPreviousRecentlyUsedEditor')
@@ -49,24 +49,28 @@ if exists('g:vscode')
     endfunction
     nnoremap <Backspace> <Cmd>call SwitchRecentlyUsedEditor()<CR>
     nnoremap $ <Cmd>call VSCodeNotify('workbench.action.focusOtherSideEditor')<CR>
+    map - <End>
 else
     let g:nvimapp = 0
     nnoremap j gj
     nnoremap k gk
     nmap <Backspace> <C-W>p
     set number
+<<<<<<< HEAD
     au VimEnter,VimResume * set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
 			    \,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor
 			    \,sm:block-blinkwait175-blinkoff150-blinkon175
 
     au VimLeave,VimSuspend * set guicursor=a:hor20-blinkon0
+=======
+    map - $
+>>>>>>> 3624d7a (Small fixes.)
 endif
 
 set ignorecase smartcase
 
 let mapleader = ","
 
-map - $
 map <C-j> <C-f>
 map <C-k> <C-b>
 
