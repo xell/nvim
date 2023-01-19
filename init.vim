@@ -14,15 +14,22 @@ if exists('g:vscode')
     nnoremap zK :call VSCodeNotify('editor.gotoParentFold')<CR>
 
     " https://github.com/vscode-neovim/vscode-neovim/issues/259
-    function! MoveCursor(direction) abort
-        if(reg_recording() == '' && reg_executing() == '')
-            return 'g'.a:direction
-        else
-            return a:direction
-        endif
-    endfunction
-    nmap <expr> j MoveCursor('j')
-    nmap <expr> k MoveCursor('k')
+    "  function! MoveCursor(direction) abort
+    "      if(reg_recording() == '' && reg_executing() == '')
+    "          return 'g'.a:direction
+    "      else
+    "          return a:direction
+    "      endif
+    "  endfunction
+    "  nmap <expr> j MoveCursor('j')
+    "  nmap <expr> k MoveCursor('k')
+    nmap j gj
+    nmap k gk
+    "  nmap j :call VSCodeCall('cursorMove', { 'to': 'down', 'by': 'wrappedLine', 'value': v:count ? v:count : 1 })<CR>
+    "  nmap k :call VSCodeCall('cursorMove', { 'to': 'up', 'by': 'wrappedLine', 'value': v:count ? v:count : 1 })<CR>
+
+    " FIXME
+    vnoremap == <Cmd>call VSCodeNotify('editor.action.reindentselectedlines')<CR>
 
     " TODO
     let s:maximized_flag = 1
@@ -56,6 +63,9 @@ else
     nnoremap k gk
     nmap <Backspace> <C-W>p
     set number
+
+    " cursor
+    " https://github.com/neovim/neovim/wiki/FAQ#cursor-style-isnt-restored-after-exiting-or-suspending-and-resuming-nvim
     au VimEnter,VimResume * set guicursor=n-v-c:block,i-ci-ve:ver25,r-cr:hor20,o:hor50
 			    \,a:blinkwait700-blinkoff400-blinkon250-Cursor/lCursor
 			    \,sm:block-blinkwait175-blinkoff150-blinkon175
@@ -101,6 +111,8 @@ let g:smartim_default = 'com.apple.keylayout.ABC'
 " autocmd InsertLeave * :silent !/usr/local/bin/im-select com.apple.keylayout.ABC
 " autocmd UIEnter * set noimd
 
+nmap <Leader>fn :e /Users/xell/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes/QuickNote.md<CR>
+
 call plug#begin()
 " https://github.com/junegunn/vim-plug
 " The default plugin directory will be as follows:
@@ -120,7 +132,16 @@ if exists('g:vscode')
 else
 	Plug 'easymotion/vim-easymotion', {'rtp': 'nvim'}
 endif
+" The easymotion patch will soon be removed in favor of
+" https://github.com/vscode-neovim/vscode-neovim/pull/868
 Plug 'zzhirong/vim-easymotion-zh'
+
+"  TODO
+"  " inside plug#begin:
+"  " 在使用neovim的时候启用vim-easymotion插件
+"  Plug 'easymotion/vim-easymotion', Cond(!exists('g:vscode'))
+"  " 在vscode-neovim插件模式下启用另一个插件
+"  Plug 'asvetliakov/vim-easymotion', Cond(exists('g:vscode'), { 'as': 'vsc-easymotion' })
 
 " Initialize plugin system
 " - Automatically executes `filetype plugin indent on` and `syntax enable`.
@@ -144,3 +165,33 @@ noremap T <Plug>(easymotion-Tl)
 noremap ;. <Plug>(easymotion-repeat)
 noremap ;l <Plug>(easymotion-next)
 noremap ;h <Plug>(easymotion-prev)
+noremap <Leader>/ <Plug>(easymotion-sn)
+
+command! -range=% Num :call NumberOfChars()
+function! NumberOfChars() range "{{{
+	"count double-byte characters
+	redir => numChs
+	"silent! execute a:firstline.",".a:lastline."s/[^\\x00-\\xff]/&/gn"
+	silent! execute "'<,'>s/[^\\x00-\\xff]/&/gn"
+	redir END
+	if match(numChs,"E486") > 0
+		let numC = 0
+	else
+		let numC = strpart(numChs, 0, stridx(numChs," "))
+	endif
+
+	"count english words
+	redir => numEng
+	silent! execute "'<,'>s/\\<\\(\\w\\|-\\|'\\)\\+\\>/&/gn"
+	redir END
+	if match(numEng,"E486") > 0
+		let numE = 0
+	else
+		let numE = strpart(numEng, 0, stridx(numEng," "))
+	endif
+
+	"echo to vim
+	echo ""
+	echo numC . " 个中文字符"
+	echo numE . " 个英文词语"
+endfunction "}}}
