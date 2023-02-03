@@ -94,8 +94,6 @@ nmap <Leader>v :vsplit<CR>
 nmap <Leader>c <C-W>c
 nmap ` <C-W>w
 
-"  vmap <D-d> "zy:silent! !open "https://www.google.com/search?q="$(php -r "echo rawurlencode('<C-R>z');")<CR>
-"  vmap <D-d> "zy:silent! !open "https://www.google.com/search?q="$(php -r "echo rawurlencode('@z');")<CR>
 vmap <D-d> "zy:call <SID>google()<CR>
 nmap <D-d> :silent !open "dict://<cword>"<CR>
 function s:google()
@@ -104,51 +102,36 @@ function s:google()
     exec 'silent! !open "https://www.google.com/search?q=' . shellescape(word, 1) . '"'
 endfunction
 
+nmap <Leader>fn :e /Users/xell/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes/QuickNote.md<CR>
+
+" https://github.com/junegunn/vim-plug
+call plug#begin()
+
+" easymotion plugins {{{
+if exists('g:vscode')
+	" Plug 'asvetliakov/vim-easymotion', {'rtp': 'vscode'}
+    Plug 'asvetliakov/vim-easymotion', {'as': 'vsc-easymotion'}
+else
+    "  https://github.com/vscode-neovim/vscode-neovim/wiki/Plugins#vim-easymotion
+    " Plug 'easymotion/vim-easymotion', {'rtp': 'nvim'}
+	Plug 'easymotion/vim-easymotion'
+endif
+
+" }}}
+
+" https://www.v2ex.com/t/856921
+Plug 'zzhirong/vim-easymotion-zh'
+
 " https://github.com/ybian/smartim
+Plug 'ybian/smartim'
+
+call plug#end()
+
 let g:smartim_default = 'com.apple.keylayout.ABC'
 " let g:smartim_disable = 1
 " unlet g:smartim_disable
 " autocmd InsertLeave * :silent !/usr/local/bin/im-select com.apple.keylayout.ABC
 " autocmd UIEnter * set noimd
-
-nmap <Leader>fn :e /Users/xell/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes/QuickNote.md<CR>
-
-call plug#begin()
-" https://github.com/junegunn/vim-plug
-" The default plugin directory will be as follows:
-"   - Vim (Linux/macOS): '~/.vim/plugged'
-"   - Vim (Windows): '~/vimfiles/plugged'
-"   - Neovim (Linux/macOS/Windows): stdpath('data') . '/plugged'
-" You can specify a custom plugin directory by passing it as the argument
-"   - e.g. `call plug#begin('~/.vim/plugged')`
-"   - Avoid using standard Vim directory names like 'plugin'
-
-" Make sure you use single quotes
-
-"  https://github.com/vscode-neovim/vscode-neovim/wiki/Plugins#vim-easymotion
-"  https://www.v2ex.com/t/856921
-if exists('g:vscode')
-	Plug 'asvetliakov/vim-easymotion', {'rtp': 'vscode'}
-else
-	Plug 'easymotion/vim-easymotion', {'rtp': 'nvim'}
-endif
-" The easymotion patch will soon be removed in favor of
-" https://github.com/vscode-neovim/vscode-neovim/pull/868
-Plug 'zzhirong/vim-easymotion-zh'
-
-"  TODO
-"  " inside plug#begin:
-"  " 在使用neovim的时候启用vim-easymotion插件
-"  Plug 'easymotion/vim-easymotion', Cond(!exists('g:vscode'))
-"  " 在vscode-neovim插件模式下启用另一个插件
-"  Plug 'asvetliakov/vim-easymotion', Cond(exists('g:vscode'), { 'as': 'vsc-easymotion' })
-
-" Initialize plugin system
-" - Automatically executes `filetype plugin indent on` and `syntax enable`.
-call plug#end()
-" You can revert the settings after the call like so:
-"   filetype indent off   " Disable file-type-specific indentation
-"   syntax off            " Disable syntax highlighting
 
 let g:EasyMotion_leader_key=";"
 let g:EasyMotion_skipfoldedline=0
