@@ -114,7 +114,7 @@ if exists('g:vscode')
 else
     "  https://github.com/vscode-neovim/vscode-neovim/wiki/Plugins#vim-easymotion
     " Plug 'easymotion/vim-easymotion', {'rtp': 'nvim'}
-	Plug 'easymotion/vim-easymotion'
+    Plug 'easymotion/vim-easymotion'
 endif
 
 " }}}
