@@ -1,6 +1,10 @@
 " vim:foldmethod=marker
+" let indent_level = indent(v:foldstart)
+" let indent = repeat(' ',indent_level)
+syntax on
+filetype on
 if exists('g:vscode')
-    let g:nvimapp = 1
+    let g:nvikapp = 1
     " https://github.com/vscode-neovim/vscode-neovim/issues/58
     nnoremap zM :call VSCodeNotify('editor.foldAll')<CR>
     nnoremap zR :call VSCodeNotify('editor.unfoldAll')<CR>
@@ -88,8 +92,27 @@ else
 
     " nnoremap j gj
     " nnoremap k gk
-    nmap <Backspace> <C-W>p
     set number
+    nmap <silent> <Backspace> :call <SID>goto_previous_or_next_window()<CR>
+
+    function s:goto_previous_or_next_window() abort
+        let ori_win_nr = winnr()
+        exe "normal \<c-w>\<c-p>"
+        let cur_win_nr = winnr()
+        if ori_win_nr == cur_win_nr
+            exe "normal \<c-w>\<c-w>"
+        endif
+    endfunction
+
+    nmap <D-s> :update<CR>
+    imap <D-s> <Esc>:update<CR>
+
+    nmap <C-L> :exec "set filetype=" . &filetype<CR>
+
+    nmap <M-j> <C-w>j
+    nmap <M-k> <C-w>k
+    nmap <M-l> <C-w>l
+    nmap <M-h> <C-w>h
 
     " cursor
     " https://github.com/neovim/neovim/wiki/FAQ#cursor-style-isnt-restored-after-exiting-or-suspending-and-resuming-nvim
@@ -101,21 +124,42 @@ else
 	    au VimLeave,VimSuspend * set guicursor=a:hor20-blinkon0
     endif
     map - $
-    if system("osascript -e 'tell application \"System Events\" to tell appearance preferences to return dark mode'") =~? 'false'
-		colorscheme xell_light_white
-    else
-		colorscheme xell_dark
-	endif
+    " if system("osascript -e 'tell application \"System Events\" to tell appearance preferences to return dark mode'") =~? 'false'
+	" 	colorscheme xell_light_white
+    " else
+	" 	colorscheme xell_dark
+	" endif
+
+    nmap <S-D-{> gT
+    nmap <S-D-}> gt
+    " source the visual selection
+    vmap <C-s> y:@"<CR>
+
 endif
 
 set ignorecase smartcase
 set iskeyword+=-
 set autochdir
 set breakindent
-set foldcolumn=2
+set breakindentopt=list:-2
+" nvim-diff
+set foldcolumn=auto
 set tabstop=4
 set shiftwidth=4
 set concealcursor=nc
+set expandtab
+" nvim-diff
+" fillchars
+" nvim-diff
+set laststatus=2
+" hide intro screen
+set shortmess+=I
+
+" https://stackoverflow.com/questions/17578941/default-colorscheme-loads-prior-to-user-defined-one-causing-flash
+" set visualbell
+
+" https://neovim.io/doc/user/lua.html#vim.highlight
+au TextYankPost * silent! lua vim.highlight.on_yank()
 
 set omnifunc=syntaxcomplete#Complete
 imap <D-d> <C-x><C-K>
@@ -158,17 +202,11 @@ nmap <Leader>fN :e /Users/xell/Library/Mobile Documents/iCloud~md~obsidian/Docum
 " https://gitlab.com/sultanahamer/dotfiles/-/blob/master/nvim/lua/plugins.lua?ref_type=heads
 call plug#begin()
 
-" easymotion plugins {{{
-if exists(1 || 'g:vscode')
-	" Plug 'asvetliakov/vim-easymotion', {'rtp': 'vscode'}
-    Plug 'asvetliakov/vim-easymotion', {'as': 'vsc-easymotion'}
-else
-    "  https://github.com/vscode-neovim/vscode-neovim/wiki/Plugins#vim-easymotion
-    " Plug 'easymotion/vim-easymotion', {'rtp': 'nvim'}
-    Plug 'easymotion/vim-easymotion'
-endif
-
-" }}}
+" easymotion plugins
+" https://github.com/timsu92/vim-easymotion/pull/2/files
+" https://github.com/easymotion/vim-easymotion/issues/484
+" https://github.com/easymotion/vim-easymotion/issues/452
+Plug 'easymotion/vim-easymotion'
 
 " https://www.v2ex.com/t/856921
 Plug 'zzhirong/vim-easymotion-zh'
@@ -182,11 +220,13 @@ Plug 'xiyaowong/fast-cursor-move.nvim'
 
 " https://github.com/ixru/nvim-markdown
 " no foldlevel support https://github.com/ixru/nvim-markdown/issues/5
-Plug 'ixru/nvim-markdown'
+" Plug 'ixru/nvim-markdown'
 
 " Plug 'vim-scripts/ZoomWin'
 
-" Plug 'vimpostor/vim-lumen'
+" https://github.com/vimpostor/vim-lumen
+" Make vim follow your system-wide dark mode preference, colorscheme
+Plug 'vimpostor/vim-lumen'
 
 " https://github.com/neoclide/coc.nvim
 " https://github.com/neoclide/coc-sources
@@ -195,17 +235,50 @@ Plug 'ixru/nvim-markdown'
 " replaced telescope
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
+" https://github.com/neovim/nvim-lspconfig lspconfig
+" https://www.reddit.com/r/neovim/comments/14pvyo4/why_is_nobody_using_coc_anymore/
+" Plug 'neovim/nvim-lspconfig'
+
 " https://github.com/nvim-telescope/telescope.nvim
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
+" https://github.com/crispgm/telescope-heading.nvim
+Plug 'crispgm/telescope-heading.nvim'
+" https://github.com/stevearc/aerial.nvim
+Plug 'stevearc/aerial.nvim'
+
+" https://github.com/hoschi/yode-nvim?tab=readme-ov-file
+Plug 'hoschi/yode-nvim'
 
 " https://github.com/chentoast/marks.nvim
 " https://www.reddit.com/r/neovim/comments/q7bgwo/marksnvim_a_plugin_for_viewing_and_interacting/
 Plug 'chentoast/marks.nvim'
 
+" https://github.com/lukas-reineke/indent-blankline.nvim
+" wait for 20231218 Virtual text in indented word-wrapped area
+" https://github.com/neovim/neovim/issues/23108 
+Plug 'lukas-reineke/indent-blankline.nvim'
+
 call plug#end()
 
-imap <Plug> <Plug>Markdown_NewLineBelow
+" yode-nvim
+lua require('yode-nvim').setup({})
+map <Leader>yc      :YodeCreateSeditorFloating<CR>
+map <Leader>yr :YodeCreateSeditorReplace<CR>
+nmap <Leader>yd :YodeBufferDelete<cr>
+" imap <Leader>yd <Esc>:YodeBufferDelete<cr>
+
+" crispgm/telescope-heading.nvim
+lua require('telescope').load_extension('heading')
+" stevearc/aerial.nvim
+lua require("telescope").load_extension("aerial")
+lua require("aerial").setup({ backends = { "treesitter", "lsp", "markdown", "man" }, show_nesting = { ["_"] = true, markdown = true, json = ture, } })
+
+" indent
+" lua require("ibl").setup({ indent = { char = '▏', highlight = { "NonText" }}})
+
+" markdown
+" imap <Plug> <Plug>Markdown_NewLineBelow
 " imap <S-Tab> <Plug>Markdown_DeindentListItem
 
 " https://linovox.com/install-and-use-telescope-in-neovim/
@@ -291,13 +364,42 @@ nnoremap <silent><nowait><expr> <C-k> coc#float#has_scroll() ? coc#float#scroll(
 " hover
 " refer to keybinds in https://github.com/VonHeikemen/lsp-zero.nvim?tab=readme-ov-file#keybindings
 
+function! CheckBackspace() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
+
+" https://github.com/kitten/prosemd-lsp
+
+map <D-.> :call CocAction('doHover')<CR>
+
+" Do you need to configure your work environment as luv
+" https://github.com/LunarVim/LunarVim/issues/4049
+" https://github.com/xiyaowong/coc-sumneko-lua
+" https://superuser.com/questions/1668467/undefined-global-vim-in-lua-language-server-coc-nvim
+" lua require('lspconfig').lua_ls.setup { settings = { Lua = { workspace = { checkThirdParty = "Disable", }, }, }, }
+
+
+function! SynStack()
+  if !exists("*synstack")
+    return
+  endif
+  echo map(synstack(line('.'), col('.')), 'synIDattr(v:val, "name")')
+endfunc
+
 
 set dictionary=/usr/share/dict/words
 set complete+=k
 set infercase
 
-" au User LumenLight colorscheme xell_light_white
-" au User LumenDark colorscheme xell_dark
+if match(expand('$VIM'), 'VimR.app') > -1
+    " https://github.com/qvacua/vimr/issues/728
+    " https://github.com/neovim/neovim/issues/26372
+    " set termguicolors
+    " highlight Normal guibg=NONE guifg=NONE ctermbg=NONE ctermfg=NONE
+    au User LumenLight nested colorscheme onehalflight
+    au User LumenDark nested colorscheme onehalfdark
+endif
 
 let g:smartim_default = 'com.apple.keylayout.ABC'
 " let g:smartim_disable = 1
@@ -396,3 +498,46 @@ function! s:get_link()
 	return matchstr(getline(searchpos('^[ ]\{0,3}\[' . id . '\]:\s', 'n')[0]), '\]:\s\zs[^ ]\+\ze')
 endfunction
 
+if has('gui_running')
+    let g:testgui = 1
+endif
+
+nmap <D-r> :so %<CR>
+
+" TODO
+" call win_getid()
+" call win_gotoid(win_findbuf(bufnr)[0])
+" https://www.reddit.com/r/neovim/comments/11otu7l/using_telescope_selection_for_custom_function/
+" https://github.com/nvim-telescope/telescope.nvim/issues/2188
+lua <<EOF
+local actions = require("telescope.actions")
+require("telescope").setup({
+		pickers = {
+            buffers = {
+                mappings = {
+                    i = { ["<S-CR>"] = actions.select_tab_drop }
+                },
+            },
+            find_files = {
+                mappings = {
+                    i = { ["<S-CR>"] = actions.select_tab_drop }
+                }
+            },
+            git_files = {
+                mappings = {
+                    i = { ["<S-CR>"] = actions.select_tab_drop }
+                }
+            },
+            old_files = {
+                mappings = {
+                    i = { ["<S-CR>"] = actions.select_tab_drop }
+                }
+            },
+            live_grep = {
+                mappings = {
+                    i = { ["<S-CR>"] = actions.select_tab_drop }
+                }
+            },
+    }
+})
+EOF

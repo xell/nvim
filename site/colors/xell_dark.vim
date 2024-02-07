@@ -120,6 +120,7 @@ call AddHighlight('ErrorMsg', red[0], bg)
 call AddHighlight('Todo', orange[0], bg, undercurl, orange[0])
 
 call AddHighlight('Visual', bg, yellow[0])
+
 " Visual:
 " Change the selection color on focus change 
 " call AddHighlight('Visual', none, 'MacSelectedTextBackgroundColor' )

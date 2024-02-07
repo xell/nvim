@@ -76,6 +76,7 @@ call AddHighlight('CursorIM', none, red[0])
 call AddHighlight('ColorColumn', white, gray[2])
 call AddHighlight('StatusLine', fg, gray[1], none)
 call AddHighlight('StatusLineNC', white, gray[2], none)
+" nvim-diff WinSeparator
 call AddHighlight('VertSplit', gray[1], gray[1], none)
 call AddHighlight('TabLineSel', white, gray[2], none)
 call AddHighlight('TabLine', none, gray[1], none)
@@ -131,6 +132,9 @@ if has("gui_macvim") && !exists("s:augroups_defined")
   let s:augroups_defined = 1
 endif
 call AddHighlight('Visual', fg, yellow[0])
+
+lua vim.api.nvim_set_hl(0, 'Temp', { fg = "#ffffff", bg = "#333333" })
+
 " }}}
 
 " Other: {{{
