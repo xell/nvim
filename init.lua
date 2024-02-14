@@ -13,7 +13,6 @@
 vim.loader.enable()
 
 vim.g.mapleader = ","
--- vim.g.markdown_folding = 1
 vim.opt.number = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
@@ -236,6 +235,7 @@ require("lazy").setup({
     }, -- }}}
     { dir = vim.fn.stdpath('data') .. '/site' },
     { dir = vim.fn.stdpath('data') .. '/site/pack/main/start/winfullscreen' },
+    { dir = vim.fn.stdpath('data') .. '/site/pack/xell/start/outlinex' },
     --  https://github.com/chentoast/marks.nvim
     { 'chentoast/marks.nvim',
         config = function () -- {{{
@@ -709,8 +709,17 @@ endfunction
 
 --- UI GUI {{{
     --- nvim-spec
-    vim.opt.fillchars = 'vert: ,eob: '
-    vim.cmd[[highlight default link WinSeparator VertSplit]]
+    -- vim.opt.fillchars = 'vert: ,eob: '
+    vim.opt.fillchars = {
+        fold = " ",
+        foldopen = "",
+        foldclose = "",
+        foldsep = " ",
+        diff = "╱",
+        eob = " ",
+        vert = " ",
+    }
+    vim.cmd[[hi default link WinSeparator VertSplit]]
     --- TUI cursor
     if vim.fn.has('gui_running') == 0 then
         vim.api.nvim_create_autocmd(
@@ -746,5 +755,4 @@ vim.api.nvim_create_autocmd({'VimEnter', 'BufRead'}, {
     end,
 })
 
-UHandlers = require("url-open.modules.handlers")
-UOptions = require("url-open.modules.options")
+vim.g.markdown_folding = 1
