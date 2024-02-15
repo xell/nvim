@@ -1,13 +1,26 @@
-vim.opt_local.shiftwidth = 2
-vim.opt_local.concealcursor = 'nc'
-vim.opt_local.conceallevel = 2
-vim.opt_local.breakindent = true
-vim.opt_local.linebreak = true
+local vol = vim.opt_local
+vol.tabstop = 2
+vol.shiftwidth = 2
+vol.concealcursor = 'nc'
+vol.conceallevel = 2
+vol.breakindent = true
+vol.linebreak = true
+vol.formatoptions = 'mBlrocq'
+vol.comments:append(':-')
+vol.comments:remove('fb:-')
+vol.formatlistpat = '^\\s*\\d\\+\\.\\s\\+\\|^\\s*[-*+]\\s\\+\\|^\\[^\\ze[^\\]]\\+\\]:\\&^.\\{4\\}'
+vol.breakindentopt = "list:-2"
+-- vol.breakindentopt = "shift:2"
+
+local vks = vim.keymap.set
+vks('v', '<Leader>b', [[<ESC>`>a**<ESC>`<i**<ESC>`>ll]], { buffer = true })
+vks('v', '<Leader>i', [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]], { buffer = true })
+vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
 
 -- fold {{{
 -- TODO
-vim.wo.foldminlines = 1
-vim.opt_local.foldmethod = 'expr'
+vol.foldminlines = 1
+vol.foldmethod = 'expr'
 
 -- folding https://github.com/kevinhwang91/nvim-ufo
 -- https://www.reddit.com/r/neovim/comments/10q2mjq/i_dont_really_get_folding/
@@ -21,8 +34,8 @@ vim.opt_local.foldmethod = 'expr'
 -- function M.get_my_foldlevel() ... end
 -- return M
 -- vim.o.foldexpr = 'v:lua.require("config.folding").get_my_foldlevel()'
-vim.wo.foldexpr = 'v:lua.MKDFold()'
-vim.wo.foldtext = 'v:lua.MKDfoldText()'
+vol.foldexpr = 'v:lua.MKDFold()'
+vol.foldtext = 'v:lua.MKDfoldText()'
 
 -- 1->1, 3->2, 5->3
 -- blank line is 0
@@ -48,15 +61,23 @@ _G.MKDfoldText = function ()
     local fs_next = fs + 1
     local line = vim.fn.getline(fs)
     -- line = string.sub(line, 1, 50)
-    -- ⊙ ○ ● ✪ ⊕ ⌾ ⊗ ⊘ ⊙ ⊚
+    -- ⊙ ○ ● ✪ ⊕ ⌾ ⊗ ⊘ ⊚
     --         󰺕 󱎕 󰧞 󰧟 󰅙      󰻃󰝦
     --   󰺕 󰻃
     if vim.fn.foldlevel(fs) < vim.fn.foldlevel(fs_next) then
       -- it's a real fold with sub items underneath
       line = string.gsub(line, '-', '●', 1)
+      -- line = string.gsub(line, '-', '', 1)
     else
       -- it's only a lone, wrapped line fold by 'foldminlines'
-      line = string.gsub(line, '-', '⊙', 1)
+      -- ﹥﹥
+      line = string.gsub(line, '-', '◇', 1)
+      -- line = string.gsub(line, '-', '⋗', 1)
+      -- line = string.gsub(line, '-', '', 1)
+      -- line = string.gsub(line, '-', '󰧞', 1)
+      -- line = string.gsub(line, '-', '', 1)
+      -- line = string.gsub(line, '-', '⊙', 1)
+      -- line = string.gsub(line, '-', '󰺕', 1)
       -- line = string.gsub(line, '-', '', 1)
     end
     return line

@@ -1,72 +1,117 @@
 -- vim:fdm=marker
 -- xell neovim nvim config
+--  \  /
+--   \/   |--  |    |
+--   /\   |--  |    |
+--  /  \  |--  |--  |--
 
 --[[ TODO
 - cursor
-- url open web
 - signcolumn
+- c-k
+- file operation https://github.com/tpope/vim-eunuch
 --]]
-
--- vim.print("hello")
 
 -- https://www.reddit.com/r/neovim/comments/12bmzjk/reduce_neovim_startup_time_with_plugins/
 vim.loader.enable()
+local vo = vim.opt
+local vol = vim.opt_local
+local vg = vim.g
+local vks = vim.keymap.set
+local vf = vim.fn
 
-vim.g.mapleader = ","
-vim.opt.number = true
-vim.opt.ignorecase = true
-vim.opt.smartcase = true
-vim.opt.iskeyword:append('-')
-vim.opt.autochdir = true
-vim.opt.breakindent = true
-vim.opt.breakindentopt = "list:-2"
-vim.opt.foldcolumn = 'auto' -- nvim-spec
-vim.opt.expandtab = true
-vim.opt.tabstop = 4
-vim.opt.shiftwidth = 4
-vim.opt.concealcursor = 'nc'
-vim.opt.laststatus = 2 -- nvim-spec
-vim.opt.shortmess:append('I')
-vim.opt.visualbell = true
-vim.opt.exrc = true
+-- General options {{{
+vg.mapleader = ","
+vo.number = true
+vo.ignorecase = true
+vo.smartcase = true
+vo.iskeyword:append('-')
+vo.autochdir = true
+vo.breakindent = true
+vo.breakindentopt = "list:-2"
+vo.foldcolumn = 'auto' -- nvim-spec
+vo.expandtab = true
+vo.tabstop = 4
+vo.shiftwidth = 4
+vo.concealcursor = 'nc'
+vo.laststatus = 2 -- nvim-spec
+vo.shortmess:append('I')
+vo.visualbell = true
+vo.exrc = true
+vo.shada = "'100,<1000,s500,h" -- ori viminfo
+vo.whichwrap:append('<,>,[,],l,h')
+vo.sessionoptions = 'buffers,curdir,folds,globals,help,resize,slash,tabpages,winpos,winsize,localoptions,options'
+vo.nrformats:append('alpha')
+vo.ignorecase = true
+vo.smartcase = true
+vo.incsearch = true
+vo.wrapscan = false
+vo.wildignore = '*.o,*.ojb,*.pyc,*.DS_Store,*.db,*.dll,*.exe,*.a'
+vo.updatetime = 1000
+vo.modelineexpr = true
+vo.smoothscroll = true
+-- "double" cannot be used if 'listchars' or 'fillchars' contains a character that would be double width.
+vo.ambiwidth = 'single'
+vo.report = 0
+-- }}}
 
+-- Special filetypes and cases {{{
+-- ?? mathematica
+vg.filetype_m = 'mma'
+-- ?? sh filetype, see *sh.vim*
+vg.is_bash = 1
+vg.sh_fold_enabled = 3
+
+-- xell Notes
 local xell_note_root_raw = '~/Library/Mobile\\ Documents/iCloud~md~obsidian/Documents/Notes'
-vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob(xell_note_root_raw))
+vg.xell_notes_root = vf.fnameescape(vf.glob(xell_note_root_raw))
 
--- Helper functions {{{
+-- official markdown fold
+vg.markdown_folding = 1
+
+-- https://www.reddit.com/r/neovim/comments/18ffxmc/exrcnvim_utilities_for_writing_and_managing/
+vim.api.nvim_create_autocmd({'VimEnter', 'BufRead'}, {
+    callback = function()
+        local file = vim.secure.read(vf.getcwd() .. "/.nvim.lua")
+        if file ~= nil then
+            local f = loadstring(file)
+            if f ~= nil then f() end
+        end
+    end,
+})
+
+-- }}}
+
+-- Helper functions TODO {{{
 local function k(keys) -- {{{ get keycodes
     return vim.api.nvim_replace_termcodes(keys, true, true, true)
 end -- }}}
 
 local function uri_encode(string) -- {{{
-    return vim.fn.substitute(vim.fn.iconv(string, 'latin1', 'utf-8'),'[^A-Za-z0-9_.~-]','\\="%".printf("%02X",char2nr(submatch(0)))','g')
+    return vf.substitute(vf.iconv(string, 'latin1', 'utf-8'),'[^A-Za-z0-9_.~-]','\\="%".printf("%02X",char2nr(submatch(0)))','g')
 end -- }}}
 -- }}}
 
 -- Windows and tab {{{
 
 -- window size TODO
-vim.keymap.set('n', '<M-->', '<C-w>-')
-vim.keymap.set('n', '<M-=>', '<C-w>+')
-vim.keymap.set('n', '<M-,>', '<C-w><')
-vim.keymap.set('n', '<M-.>', '<C-w>>')
+vks('n', '<M-->', '<C-w>-')
+vks('n', '<M-=>', '<C-w>+')
+vks('n', '<M-,>', '<C-w><')
+vks('n', '<M-.>', '<C-w>>')
 
 -- <M-n> goes to the n window
 for i = 1, 10 do
-    vim.keymap.set(
-        'n',
-        '<M-' .. i .. '>',
-        i .. '<c-w><c-w>'
-        )
+    vks('n', '<M-' .. i .. '>', i .. '<c-w><c-w>')
 end
 
 -- <M-h/j/k/l>
 for c in ("hjkl"):gmatch"." do
-    vim.keymap.set('n', '<M-' .. c .. '>', '<C-w>' .. c)
+    vks('n', '<M-' .. c .. '>', '<C-w>' .. c)
 end
 
 -- <Backspace> to jump between two recent windows
-vim.keymap.set('n', '<Backspace>', function()
+vks('n', '<Backspace>', function()
     local ori_win_nr = vim.api.nvim_win_get_number(0)
     -- vim.cmd('exec "normal \\<c-w>\\<c-p>"')
     vim.cmd.normal(k('<c-w><c-p>'))
@@ -75,52 +120,86 @@ vim.keymap.set('n', '<Backspace>', function()
         vim.cmd.normal(k('<c-w><c-w>'))
     end
 end, {silent = true})
+-- \ to jump clockwise
+vks('n', '\\', '<C-w>W')
 
 -- split
-vim.keymap.set('n', '<Leader>s', vim.cmd.split)
-vim.keymap.set('n', '<Leader>v', vim.cmd.vsplit)
+vks('n', '<Leader>s', vim.cmd.split)
+vks('n', '<Leader>v', vim.cmd.vsplit)
 
 -- close
-vim.keymap.set('n', '<Leader>c', '<C-w>c')
-vim.keymap.set('n', '<Leader>o', '<C-w>o')
+vks('n', '<Leader>c', '<C-w>c')
+vks('n', '<Leader>o', '<C-w>o')
+
+-- open window arrangment
+vks('n', '<Leader>wh', function () vim.cmd[[topleft vertical split]] end)
+vks('n', '<Leader>wj', function () vim.cmd[[botright split]] end)
+vks('n', '<Leader>wk', function () vim.cmd[[topleft split]] end)
+vks('n', '<Leader>wl', function () vim.cmd[[botright vertical split]] end)
 
 -- tab, next and previous
-vim.keymap.set('n', '<S-D-{>', 'gT')
-vim.keymap.set('n', '<S-D-}>', 'gt')
+vks('n', '<S-D-{>', 'gT')
+vks('n', '<S-D-}>', 'gt')
+for i = 1, 10, 1 do
+    vks('n', '<D-' .. i .. '>', i .. 'gt')
+end
+
+-- easy edit file in new tab
+vks('n', ']f', '<C-w>gf')
 
 -- window full screen plugin
-vim.keymap.set('n', '<C-Enter>', vim.cmd.WinFullScreen)
+vks('n', '<C-Enter>', vim.cmd.WinFullScreen)
 
 --- }}}
 
+-- Mappings and commands {{{
+vks('n', '<M-q>', [[q:]])
+-- }}}
+
 -- Editing {{{
+-- - to $
+vks('', '-', '$')
+-- move in insert mode
+vks('i', '<C-h>', '<Left>')
+vks('i', '<C-l>', '<Right>')
+vks('i', '<M-->', '<PageDown>')
+vks('i', '<M-=>', '<PageUp>')
+vks('i', '<M-6>', '<Home>')
+vks('i', '<M-4>', '<End>')
 
 -- <D-s> update/write
-vim.keymap.set({ 'n', 'i' }, '<D-s>', function()
+vks({ 'n', 'i' }, '<D-s>', function()
     -- no need to distinguish n and i and use <Esc> to escape the latter
     print(select(2, pcall(vim.cmd.update)))
 end)
 
 -- hack for highlight, re-set the filetype
-vim.keymap.set('n', '<C-L>', function ()
-    vim.opt_local.filetype = vim.opt.filetype:get()
+vks('n', '<C-L>', function ()
+    vol.filetype = vo.filetype:get()
 end)
 
--- - to $
-vim.keymap.set('', '-', '$')
 
 -- source the visual selection
-vim.keymap.set('v', '<C-s>', 'y:@"<CR>')
+vks('v', '<C-s>', 'y:@"<CR>')
 
 -- page up / down
-vim.keymap.set('', '<C-k>', '<C-b>')
-vim.keymap.set('', '<C-j>', '<C-f>')
+vks('', '<C-k>', '<C-b>')
+vks('', '<C-j>', '<C-f>')
 
 -- search
-vim.keymap.set('n', '<Leader>ns', function() vim.fn.setreg('/', '') end)
-vim.keymap.set('n', '<Leader>nh', function() vim.opt.hlsearch = false end)
-vim.keymap.set('n', '<Leader>h', function () vim.opt.hlsearch = not vim.o.hlsearch end)
+vks('n', '<Leader>ns', function() vf.setreg('/', '') end)
+vks('n', '<Leader>nh', function() vo.hlsearch = false end)
+vks('n', '<Leader>h', function () vo.hlsearch = not vim.o.hlsearch end)
+-- vks('v', '<Leader>/', function () pcall(vim.cmd.normal(k('y/<C-r>=@"<CR><CR>'))) end)
+-- vks('v', '<Leader>/', function ()
+--     print(select(2, pcall(
+--     function ()
+--         vim.cmd.normal(k('y/<C-r>=@"<CR><CR>'))
+--     end)))
+-- end)
+vks('v', '<Leader>/', 'y/<C-r>=@"<CR><CR>')
 
+-- highlight i.e. blink yank area
 vim.api.nvim_create_autocmd(
 {'TextYankPost'},
 {
@@ -129,23 +208,55 @@ vim.api.nvim_create_autocmd(
         vim.highlight.on_yank({timeout = 1000})
     end,
 })
+
+-- while opening file, jump to last known cursor position
+-- see *lua-guide-autocommands-group*
+local vim_startup_aug = vim.api.nvim_create_augroup('vimStartup', { clear = true })
+vim.api.nvim_create_autocmd({ 'BufReadPost' }, {
+    pattern = '*',
+    group = vim_startup_aug,
+    callback = function()
+        local reg_doublequote_position = vf.line([['"]])
+        if reg_doublequote_position >= 1 and
+            reg_doublequote_position <= vf.line('$') and
+            vol.filetype:get() ~= 'commit' then
+            vim.cmd.normal(k([[g`"]]))
+        end
+    end,
+})
+
+-- Capitalization of the current line
+-- Capitalize all words in titles of publications and documents, except a, an, the, at, by, for, in, of, on, to, up, and, as, but, or, and nor.
+-- https://taptoe.wordpress.com/2013/02/06/vim-capitalize-every-first-character-of-every-word-in-a-sentence/
+vim.api.nvim_create_user_command('Capitalize', function ()
+    vim.cmd[[s/\v^\a|\:\s\a|<%(a>|an>|and>|as>|at>|but>|by>|for>|in>|nor>|of>|on>|or>|the>|to>|up>)@!\a/\U&/g]]
+end, {})
+
+-- http://www.teifel.net/projects/vim/mappings.html
+vks('v', '<Leader>(', [[<ESC>`>a)<ESC>`<i(<ESC>`>ll]])
+vks('v', '<Leader><', [[<ESC>`>a><ESC>`<i<<ESC>`>ll]])
+vks('v', '<Leader>[', [[<ESC>`>a]<ESC>`<i[<ESC>`>ll]])
+vks('v', '<Leader>{', [[<ESC>`>a}<ESC>`<i{<ESC>`>ll]])
+vks('v', '<Leader>$', [[<ESC>`>a$<ESC>`<i$<ESC>`>ll]])
+vks('v', '<Leader>"', [[<ESC>`>a"<ESC>`<i"<ESC>`>ll]])
 --- }}}
 
 -- Completion {{{
-vim.opt.omnifunc = 'syntaxcomplete#Complete'
-vim.opt.dictionary = '/usr/share/dict/words'
-vim.opt.complete:append('k')
-vim.opt.infercase = true
-vim.keymap.set('i', '<D-d>', '<C-x><C-k>')
+vo.wildmenu = true
+vo.omnifunc = 'syntaxcomplete#Complete'
+vo.dictionary = '/usr/share/dict/words'
+vo.complete:append('k')
+vo.infercase = true
+vks('i', '<D-d>', '<C-x><C-k>')
 --- }}}
 
 -- Plugins {{{
 
 -- lazy {{{
 -- https://github.com/folke/lazy.nvim
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+local lazypath = vf.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({
+  vf.system({
     "git",
     "clone",
     "--filter=blob:none",
@@ -154,14 +265,14 @@ if not vim.loop.fs_stat(lazypath) then
     lazypath,
   })
 end
-vim.opt.rtp:prepend(lazypath)
+vo.rtp:prepend(lazypath)
 -- }}}
 
 require("lazy").setup({
     -- https://github.com/ybian/smartim
     { 'ybian/smartim',
         init = function () -- {{{
-            vim.g.smartim_default = 'com.apple.keylayout.ABC'
+            vg.smartim_default = 'com.apple.keylayout.ABC'
             -- let g:smartim_disable = 1
             -- unlet g:smartim_disable
             -- autocmd InsertLeave * :silent !/usr/local/bin/im-select com.apple.keylayout.ABC
@@ -173,13 +284,13 @@ require("lazy").setup({
     -- https://github.com/vimpostor/vim-lumen
     { 'vimpostor/vim-lumen',
         config = function () -- {{{
-            if vim.fn.has('gui_running') == 1 then
+            if vf.has('gui_running') == 1 then
                 -- vim.print('gui_running')
                 vim.cmd[[au User LumenLight nested colorscheme onehalflight]]
                 vim.cmd[[au User LumenDark nested colorscheme onehalfdark]]
                 vim.cmd.colorscheme(vim.o.background == 'light' and 'onehalflight' or 'onehalfdark')
             else
-                vim.opt.background = 'dark'
+                vo.background = 'dark'
             end
         end,
     }, -- }}}
@@ -210,7 +321,7 @@ require("lazy").setup({
             noremap ;l <Plug>(easymotion-next)
             noremap ;h <Plug>(easymotion-prev)
             " noremap <Leader>/ <Plug>(easymotion-sn)
-            noremap <Leader>/ <Plug>(easymotion-s)
+            nnoremap <Leader>/ <Plug>(easymotion-s)
             ]]
         end,
     }, -- }}}
@@ -223,9 +334,9 @@ require("lazy").setup({
         config = function () -- {{{
             -- according to readme, submodule should be used
             require('yode-nvim').setup({})
-            -- vim.keymap.set({ '' }, '<Leader>yc', vim.cmd.YodeCreateSeditorFloating)
-            -- vim.keymap.set('', '<Leader>yr', vim.cmd.YodeCreateSeditorReplace)
-            -- vim.keymap.set('n', '<Leader>yd', vim.cmd.YodeBufferDelete)
+            -- vks({ '' }, '<Leader>yc', vim.cmd.YodeCreateSeditorFloating)
+            -- vks('', '<Leader>yr', vim.cmd.YodeCreateSeditorReplace)
+            -- vks('n', '<Leader>yd', vim.cmd.YodeBufferDelete)
             vim.cmd[[
             map <Leader>yc :YodeCreateSeditorFloating<CR>
             map <Leader>yr :YodeCreateSeditorReplace<CR>
@@ -233,9 +344,9 @@ require("lazy").setup({
             ]]
         end,
     }, -- }}}
-    { dir = vim.fn.stdpath('data') .. '/site' },
-    { dir = vim.fn.stdpath('data') .. '/site/pack/main/start/winfullscreen' },
-    { dir = vim.fn.stdpath('data') .. '/site/pack/xell/start/outlinex' },
+    { dir = vf.stdpath('data') .. '/site' },
+    { dir = vf.stdpath('data') .. '/site/pack/main/start/winfullscreen' },
+    { dir = vf.stdpath('data') .. '/site/pack/xell/start/outlinex' },
     --  https://github.com/chentoast/marks.nvim
     { 'chentoast/marks.nvim',
         config = function () -- {{{
@@ -346,10 +457,10 @@ require("lazy").setup({
         -- https://github.com/neovim/nvim-lspconfig
         -- Global mappings. {{{
         -- See `:help vim.diagnostic.*` for documentation on any of the below functions
-        vim.keymap.set('n', '<Leader><Leader>e', vim.diagnostic.open_float)
-        vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
-        vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
-        vim.keymap.set('n', '<Leader><Leader>q', vim.diagnostic.setloclist)
+        vks('n', '<Leader><Leader>e', vim.diagnostic.open_float)
+        vks('n', '[d', vim.diagnostic.goto_prev)
+        vks('n', ']d', vim.diagnostic.goto_next)
+        vks('n', '<Leader><Leader>q', vim.diagnostic.setloclist)
 
         -- Use LspAttach autocommand to only map the following keys
         -- after the language server attaches to the current buffer
@@ -364,21 +475,21 @@ require("lazy").setup({
                 -- Buffer local mappings.
                 -- See `:help vim.lsp.*` for documentation on any of the below functions
                 local opts = { buffer = ev.buf }
-                vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-                vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-                vim.keymap.set('n', '<D-.>', vim.lsp.buf.hover, opts)
-                vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-                vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
-                vim.keymap.set('n', '<Leader><Leader>wa', vim.lsp.buf.add_workspace_folder, opts)
-                vim.keymap.set('n', '<Leader><Leader>wr', vim.lsp.buf.remove_workspace_folder, opts)
-                vim.keymap.set('n', '<Leader><Leader>wl', function()
+                vks('n', 'gD', vim.lsp.buf.declaration, opts)
+                vks('n', 'gd', vim.lsp.buf.definition, opts)
+                vks('n', '<D-.>', vim.lsp.buf.hover, opts)
+                vks('n', 'gi', vim.lsp.buf.implementation, opts)
+                vks('n', '<C-k>', vim.lsp.buf.signature_help, opts)
+                vks('n', '<Leader><Leader>wa', vim.lsp.buf.add_workspace_folder, opts)
+                vks('n', '<Leader><Leader>wr', vim.lsp.buf.remove_workspace_folder, opts)
+                vks('n', '<Leader><Leader>wl', function()
                     print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
                 end, opts)
-                vim.keymap.set('n', '<Leader><Leader>D', vim.lsp.buf.type_definition, opts)
-                vim.keymap.set('n', '<Leader><Leader>rn', vim.lsp.buf.rename, opts)
-                vim.keymap.set({ 'n', 'v' }, '<Leader><Leader>ca', vim.lsp.buf.code_action, opts)
-                vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
-                vim.keymap.set('n', '<Leader><Leader>f', function()
+                vks('n', '<Leader><Leader>D', vim.lsp.buf.type_definition, opts)
+                vks('n', '<Leader><Leader>rn', vim.lsp.buf.rename, opts)
+                vks({ 'n', 'v' }, '<Leader><Leader>ca', vim.lsp.buf.code_action, opts)
+                vks('n', 'gr', vim.lsp.buf.references, opts)
+                vks('n', '<Leader><Leader>f', function()
                     vim.lsp.buf.format { async = true }
                 end, opts)
             end,
@@ -566,12 +677,12 @@ require("lazy").setup({
         dependencies = { "nvim-tree/nvim-web-devicons" }, -- {{{
         config = function ()
             local tr = require('trouble')
-            vim.keymap.set("n", "<leader>xx", function() tr.toggle() end)
-            vim.keymap.set("n", "<leader>xw", function() tr.toggle("workspace_diagnostics") end)
-            vim.keymap.set("n", "<leader>xd", function() tr.toggle("document_diagnostics") end)
-            vim.keymap.set("n", "<leader>xq", function() tr.toggle("quickfix") end)
-            vim.keymap.set("n", "<leader>xl", function() tr.toggle("loclist") end)
-            vim.keymap.set("n", "gR", function() tr.toggle("lsp_references") end)
+            vks("n", "<leader>xx", function() tr.toggle() end)
+            vks("n", "<leader>xw", function() tr.toggle("workspace_diagnostics") end)
+            vks("n", "<leader>xd", function() tr.toggle("document_diagnostics") end)
+            vks("n", "<leader>xq", function() tr.toggle("quickfix") end)
+            vks("n", "<leader>xl", function() tr.toggle("loclist") end)
+            vks("n", "gR", function() tr.toggle("lsp_references") end)
         end,
         -- https://github.com/folke/trouble.nvim/issues/369
         opts = {
@@ -629,7 +740,13 @@ require("lazy").setup({
             })
             -- https://sbulav.github.io/vim/neovim-opening-urls/
             -- map[''].gx = {'<Cmd>call jobstart(["open", expand("<cfile>")], {"detach": v:true})<CR>'}
-            vim.keymap.set("n", "gx", vim.cmd.URLOpenUnderCursor)
+            vks("n", "gx", vim.cmd.URLOpenUnderCursor)
+        end,
+    }, -- }}}
+    -- https://github.com/wellle/context.vim
+    { "wellle/context.vim",
+        init = function () -- {{{
+            vg.context_presenter = 'nvim-float'
         end,
     }, -- }}}
 })
@@ -637,40 +754,40 @@ require("lazy").setup({
 -- }}}
 
 -- Misc {{{
--- vim.keymap.set('n', 'K', vim.lsp.buf.hover, { buffer = bufnr })
+-- vks('n', 'K', vim.lsp.buf.hover, { buffer = bufnr })
 -- toggle fold
 vim.cmd[[nnoremap <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
 -- command mode to search
-vim.keymap.set('c', '<C-k>', '<Up>')
-vim.keymap.set('c', '<C-j>', '<Down>')
+vks('c', '<C-k>', '<Up>')
+vks('c', '<C-j>', '<Down>')
 
 -- source / run
-vim.keymap.set('n', '<D-r>', [[:so %<CR>]])
+vks('n', '<D-r>', [[:so %<CR>]])
 
 -- google search selection
 -- or better https://github.com/lalitmee/browse.nvim
-vim.keymap.set('v', '<D-g>', function ()
+vks('v', '<D-g>', function ()
     -- os.execute("sleep " .. tostring(0.5))
     vim.cmd.normal[["zy]]
-    vim.ui.open("https://www.google.com/search?q=" .. uri_encode(vim.fn.eval('@z')) .. "")
+    vim.ui.open("https://www.google.com/search?q=" .. uri_encode(vf.eval('@z')) .. "")
 end)
 
 -- look up word in dictionary
-vim.keymap.set('n', '<D-d>', function ()
-    vim.ui.open('dict://' .. vim.fn.expand("<cword>"))
+vks('n', '<D-d>', function ()
+    vim.ui.open('dict://' .. vf.expand("<cword>"))
 end)
 
 -- goto for next or previous link {{{
-vim.g.url_pattern = [[[[:alpha:]-]\+:\/\/[^ "'>\])]\+]]
-vim.g.markdown_link_pattern = [[\(\[[^\^]\{-}\]\([:\[]\)\@!\(([^ ]\{-}\%(\s"[^"]\{-}"\)\?)\)\?\)]]
-vim.g.link_pattern = vim.g.url_pattern .. [[\|]] .. vim.g.markdown_link_pattern
--- vim.g.link_pattern = [[\(\[[^\^]\{-}\]\([:\[]\)\@!\(([^ ]\{-}\%(\s"[^"]\{-}"\)\?)\)\?\)\|[[:alpha:]-]\+:\/\/[^ "'>\])]\+]]
+vg.url_pattern = [[[[:alpha:]-]\+:\/\/[^ "'>\])]\+]]
+vg.markdown_link_pattern = [[\(\[[^\^]\{-}\]\([:\[]\)\@!\(([^ ]\{-}\%(\s"[^"]\{-}"\)\?)\)\?\)]]
+vg.link_pattern = vg.url_pattern .. [[\|]] .. vg.markdown_link_pattern
+-- vg.link_pattern = [[\(\[[^\^]\{-}\]\([:\[]\)\@!\(([^ ]\{-}\%(\s"[^"]\{-}"\)\?)\)\?\)\|[[:alpha:]-]\+:\/\/[^ "'>\])]\+]]
 local function move_cursor_to_link (backward)
-    local link_pattern = vim.b.link_pattern or vim.g.link_pattern
-    vim.fn.search(link_pattern, 's' .. backward)
+    local link_pattern = vim.b.link_pattern or vg.link_pattern
+    vf.search(link_pattern, 's' .. backward)
 end
-vim.keymap.set('n', 'gn', function () move_cursor_to_link('') end)
-vim.keymap.set('n', 'gN', function () move_cursor_to_link('b') end)
+vks('n', 'gn', function () move_cursor_to_link('') end)
+vks('n', 'gN', function () move_cursor_to_link('b') end)
 -- }}}
 
 -- get word count -- {{{
@@ -705,54 +822,86 @@ function! NumberOfChars() range
 endfunction
 ]] -- }}}
 
+-- diffthis
+vim.api.nvim_create_user_command('Diffthis', function ()
+    vim.cmd.diffthis()
+    vim.cmd.normal(k('<C-w>w'))
+    vim.cmd.diffthis()
+end, {})
+
+-- spell including cjk
+vim.api.nvim_create_user_command('Spell', function ()
+    if vol.spell:get() then
+        vol.spell = false
+    else
+        vol.spell = true
+        vol.spelllang = 'en_gb,cjk'
+        -- https://stackoverflow.com/questions/18196399/exclude-capitalized-words-from-vim-spell-check
+        vim.cmd[[syn match myExCapitalWords +\<\w*[A-Z]\K*\>\|'s+ contains=@NoSpell]]
+    end
+end, {})
+
+-- abbrevs
+vks('ca', 'xfn', 'echo expand("%:p")')
+vks('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
+
 -- }}}
 
---- UI GUI {{{
-    --- nvim-spec
-    -- vim.opt.fillchars = 'vert: ,eob: '
-    vim.opt.fillchars = {
-        fold = " ",
-        foldopen = "",
-        foldclose = "",
-        foldsep = " ",
-        diff = "╱",
-        eob = " ",
-        vert = " ",
-    }
-    vim.cmd[[hi default link WinSeparator VertSplit]]
-    --- TUI cursor
-    if vim.fn.has('gui_running') == 0 then
-        vim.api.nvim_create_autocmd(
-        {'VimLeave', 'VimSuspend'},
-        {
-            pattern = { "*" },
-            callback = function ()
-                vim.opt.guicursor = 'a:hor20-blinkon0'
-            end
-        })
+-- UI GUI {{{
+vo.equalalways = false
+vo.scrolloff = 10
+vo.listchars = 'tab:▸\\ ,eol:¬'
+--- nvim-spec
+-- vo.fillchars = 'vert: ,eob: '
+vo.fillchars = {
+    fold = " ",
+    foldopen = "",
+    foldclose = "",
+    foldsep = " ",
+    diff = "╱",
+    eob = " ",
+    vert = " ",
+}
+vim.cmd[[hi default link WinSeparator VertSplit]]
+--- TUI cursor
+if vf.has('gui_running') == 0 then
+    vim.api.nvim_create_autocmd(
+    {'VimLeave', 'VimSuspend'},
+    {
+        pattern = { "*" },
+        callback = function ()
+            vo.guicursor = 'a:hor20-blinkon0'
+        end
+    })
+end
+-- set lsp diagnostic signs
+-- https://www.reddit.com/r/neovim/comments/13vlv9z/how_would_i_change_the_icon_of_the_error_message/
+-- https://www.reddit.com/r/neovim/comments/10j0vyf/finally_figured_out_a_statuscolumn_i_am_happy/
+vf.sign_define('DiagnosticSignError', { text = '', texthl = 'DiagnosticSignError' })
+vf.sign_define('DiagnosticSignWarn', { text = '', texthl = 'DiagnosticSignWarn' })
+vf.sign_define('DiagnosticSignInfo', { text = '', texthl = 'DiagnosticSignInfo' })
+vf.sign_define('DiagnosticSignHint', { text = '', texthl = 'DiagnosticSignHint' })
+-- vertical separator
+vim.cmd[[hi default link Pmenu WildMenu]]
+-- reload current colorscheme
+vim.api.nvim_create_user_command('ReloadColorscheme', function ()
+    vim.cmd.colorscheme(vim.api.nvim_exec2('colorscheme', {output = true})["output"])
+end, {})
+-- toggle relativenumber
+vks('n', '<Leader>nn', function ()
+    vo.relativenumber = not vo.relativenumber:get()
+end)
+-- set colorcolumn cc
+vks('n', '<Leader>hc', function ()
+    local col = vf.virtcol('.')
+    local colorcolumn_list = vo.colorcolumn:get()
+    for _, v in pairs(colorcolumn_list) do
+        if v == '' .. col then
+            vo.colorcolumn:remove('' .. v)
+            return
+        end
     end
-    -- set lsp diagnostic signs
-    -- https://www.reddit.com/r/neovim/comments/13vlv9z/how_would_i_change_the_icon_of_the_error_message/
-    -- https://www.reddit.com/r/neovim/comments/10j0vyf/finally_figured_out_a_statuscolumn_i_am_happy/
-    vim.fn.sign_define('DiagnosticSignError', { text = '', texthl = 'DiagnosticSignError' })
-    vim.fn.sign_define('DiagnosticSignWarn', { text = '', texthl = 'DiagnosticSignWarn' })
-    vim.fn.sign_define('DiagnosticSignInfo', { text = '', texthl = 'DiagnosticSignInfo' })
-    vim.fn.sign_define('DiagnosticSignHint', { text = '', texthl = 'DiagnosticSignHint' })
-    -- vertical separator
-    vim.cmd[[hi default link Pmenu WildMenu]]
+    vo.colorcolumn:append('' .. col)
+end)
 --- }}}
 
--- https://github.com/tyru/open-browser.vim uri
-
--- https://www.reddit.com/r/neovim/comments/18ffxmc/exrcnvim_utilities_for_writing_and_managing/
-vim.api.nvim_create_autocmd({'VimEnter', 'BufRead'}, {
-    callback = function()
-        local file = vim.secure.read(vim.fn.getcwd() .. "/.nvim.lua")
-        if file ~= nil then
-            local f = loadstring(file)
-            if f ~= nil then f() end
-        end
-    end,
-})
-
-vim.g.markdown_folding = 1
