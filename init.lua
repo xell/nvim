@@ -53,6 +53,9 @@ vo.smoothscroll = true
 -- "double" cannot be used if 'listchars' or 'fillchars' contains a character that would be double width.
 vo.ambiwidth = 'single'
 vo.report = 0
+if vf.executable("rg") == 1 then
+  vo.grepprg = "rg --vimgrep --no-heading --smart-case"
+end
 -- }}}
 
 -- Special filetypes and cases {{{
@@ -295,7 +298,7 @@ require("lazy").setup({
         end,
     }, -- }}}
     -- https://github.com/easymotion/vim-easymotion
-    { 'easymotion/vim-easymotion',
+    { 'xell/vim-easymotion',
         init = function () -- {{{
             -- https://github.com/timsu92/vim-easymotion/pull/2/files
             -- https://github.com/easymotion/vim-easymotion/issues/484
@@ -329,8 +332,9 @@ require("lazy").setup({
     'zzhirong/vim-easymotion-zh',
     -- https://github.com/nvim-lua/plenary
     'nvim-lua/plenary.nvim',
-    -- https://github.com/hoschi/yode-nvim
-    { 'hoschi/yode-nvim',
+    -- https://github.com/xell/yode-nvim
+    { 'xell/yode-nvim',
+        dev = true,
         config = function () -- {{{
             -- according to readme, submodule should be used
             require('yode-nvim').setup({})
@@ -479,7 +483,7 @@ require("lazy").setup({
                 vks('n', 'gd', vim.lsp.buf.definition, opts)
                 vks('n', '<D-.>', vim.lsp.buf.hover, opts)
                 vks('n', 'gi', vim.lsp.buf.implementation, opts)
-                vks('n', '<C-k>', vim.lsp.buf.signature_help, opts)
+                vks('n', '<D-k>', vim.lsp.buf.signature_help, opts)
                 vks('n', '<Leader><Leader>wa', vim.lsp.buf.add_workspace_folder, opts)
                 vks('n', '<Leader><Leader>wr', vim.lsp.buf.remove_workspace_folder, opts)
                 vks('n', '<Leader><Leader>wl', function()
@@ -553,6 +557,41 @@ require("lazy").setup({
         }
         -- }}}
     end,
+    }, -- }}}
+    -- https://github.com/stevearc/aerial.nvim
+    { 'stevearc/aerial.nvim',
+        opts = {}, -- {{{
+        -- Optional dependencies
+        dependencies = {
+            "nvim-treesitter/nvim-treesitter",
+            "nvim-tree/nvim-web-devicons"
+        },
+        config = function ()
+            require("aerial").setup({
+                backends = { "treesitter", "lsp", "markdown", "man" },
+                -- optionally use on_attach to set keymaps when aerial has attached to a buffer
+                on_attach = function(bufnr)
+                    -- Jump forwards/backwards with '{' and '}'
+                    vim.keymap.set("n", "{", "<cmd>AerialPrev<CR>", { buffer = bufnr })
+                    vim.keymap.set("n", "}", "<cmd>AerialNext<CR>", { buffer = bufnr })
+                end,
+            })
+            -- You probably also want to set a keymap to toggle aerial
+            vim.keymap.set("n", "<leader>a", "<cmd>AerialToggle!<CR>")
+            require("telescope").load_extension("aerial")
+            require("telescope").setup({
+                extensions = {
+                    aerial = {
+                        -- Display symbols as <root>.<parent>.<symbol>
+                        show_nesting = {
+                            ["_"] = false, -- This key will be the default
+                            json = true, -- You can set the option for specific filetypes
+                            yaml = true,
+                        },
+                    },
+                },
+            })
+        end,
     }, -- }}}
     -- https://github.com/hrsh7th/nvim-cmp
     { 'hrsh7th/nvim-cmp',
@@ -749,6 +788,11 @@ require("lazy").setup({
             vg.context_presenter = 'nvim-float'
         end,
     }, -- }}}
+}, {
+    dev = {
+        path = "~/Developer/vim/scripts",
+        fallback = true,
+    },
 })
 
 -- }}}
