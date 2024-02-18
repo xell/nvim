@@ -56,6 +56,8 @@ vo.report = 0
 if vf.executable("rg") == 1 then
   vo.grepprg = "rg --vimgrep --no-heading --smart-case"
 end
+vo.splitright = true
+vo.splitbelow = true
 -- }}}
 
 -- Special filetypes and cases {{{
@@ -453,6 +455,30 @@ require("lazy").setup({
             ]]
         end,
     }, -- }}}
+    -- https://github.com/debugloop/telescope-undo.nvim/
+    { "debugloop/telescope-undo.nvim",
+        dependencies = { { -- {{{
+            "nvim-telescope/telescope.nvim",
+            dependencies = { "nvim-lua/plenary.nvim" },
+        }, },
+        keys = { { -- lazy style key map
+                "<leader>u",
+                "<cmd>Telescope undo<cr>",
+                desc = "undo history",
+        }, },
+        opts = {
+            -- don't use `defaults = { }` here, do this in the main telescope spec
+            extensions = {
+                undo = {
+                    -- telescope-undo.nvim config, see below
+                },
+            },
+        },
+        config = function(_, opts)
+            require("telescope").setup(opts)
+            require("telescope").load_extension("undo")
+        end,
+    }, -- }}}
     -- https://github.com/neovim/nvim-lspconfig
     { 'neovim/nvim-lspconfig',
     config = function () -- {{{
@@ -687,7 +713,28 @@ require("lazy").setup({
             }, {
                 { name = 'buffer' },
             })
-        }) -- }}}
+        })
+
+        -- https://github.com/hrsh7th/nvim-cmp/issues/299
+        -- https://github.com/hrsh7th/nvim-cmp/issues/1652
+        -- `/` cmdline setup.
+        cmp.setup.cmdline('/', {
+          mapping = cmp.mapping.preset.cmdline(),
+          sources = {
+            { name = 'buffer' }
+          }
+        })
+
+        -- `:` cmdline setup.
+        cmp.setup.cmdline(':', {
+          mapping = cmp.mapping.preset.cmdline(),
+          sources = cmp.config.sources({
+            { name = 'path' }
+          }, {
+            { name = 'cmdline' }
+          })
+        })
+        -- }}}
 
         local cmp_enabled = true -- {{{
         -- https://github.com/hrsh7th/nvim-cmp/issues/106
@@ -786,6 +833,12 @@ require("lazy").setup({
     { "wellle/context.vim",
         init = function () -- {{{
             vg.context_presenter = 'nvim-float'
+        end,
+    }, -- }}}
+    { 'tpope/vim-fugitive',
+        config = function () -- {{{
+            vks('n', '<Leader>gs', vim.cmd.G)
+            vks('n', '<Leader>gd', vim.cmd.Gvdiffsplit)
         end,
     }, -- }}}
 }, {
