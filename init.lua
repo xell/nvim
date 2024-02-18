@@ -352,7 +352,11 @@ require("lazy").setup({
     }, -- }}}
     { dir = vf.stdpath('data') .. '/site' },
     { dir = vf.stdpath('data') .. '/site/pack/main/start/winfullscreen' },
-    { dir = vf.stdpath('data') .. '/site/pack/xell/start/outlinex' },
+    { dir = vf.stdpath('data') .. '/site/pack/xell/start/outlinex',
+        init = function ()
+            vg.seditor_table = {}
+        end,
+    },
     --  https://github.com/chentoast/marks.nvim
     { 'chentoast/marks.nvim',
         config = function () -- {{{
