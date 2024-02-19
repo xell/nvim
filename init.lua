@@ -181,6 +181,9 @@ end)
 -- hack for highlight, re-set the filetype
 vks('n', '<C-L>', function ()
     vol.filetype = vo.filetype:get()
+    if vim.fn.foldlevel('.') > 0 then
+        vim.cmd.normal[[zv]]
+    end
 end)
 
 
@@ -839,10 +842,61 @@ require("lazy").setup({
             vg.context_presenter = 'nvim-float'
         end,
     }, -- }}}
+    -- https://github.com/tpope/vim-fugitive
     { 'tpope/vim-fugitive',
         config = function () -- {{{
             vks('n', '<Leader>gs', vim.cmd.G)
             vks('n', '<Leader>gd', vim.cmd.Gvdiffsplit)
+        end,
+    }, -- }}}
+    -- https://github.com/Sam-programs/cmdline-hl.nvim
+    { 'Sam-programs/cmdline-hl.nvim',
+        event = 'UiEnter', -- {{{
+        enabled = false,
+        opts = {
+            type_signs = {
+                [":"] = { " ", "Title" },
+                ["/"] = { " ", "Title" },
+                ["?"] = { " ", "Title" },
+                ["="] = { " ", "Title" },
+            },
+            -- custom formatting/highlight for commands
+            custom_types = {
+                -- ["command-name"] = {
+                -- [icon],[icon_hl], default to `:` icon and highlight
+                -- [lang], defaults to vim
+                -- [showcmd], defaults to false
+                -- [pat], defaults to "%w*%s*(.*)"
+                -- [code], defaults to nil
+                -- }
+                -- lang is the treesitter language to use for the commands
+                -- showcmd is true if the command should be displayed or to only show the icon
+                -- pat is used to extract the part of the command that needs highlighting
+                -- the part is matched against the raw command you don't need to worry about ranges
+                -- e.g. in 's,>'s/foo/bar/
+                -- pat is checked against s/foo/bar
+                -- you could also use the 'code' function to extract the part that needs highlighting
+                ["lua"] = { icon = " ", icon_hl = "Title", lang = "lua" },
+                ["help"] = { icon = "? ", icon_hl = "Title" },
+                ["substitute"] = { pat = "%w(.*)", lang = "regex", show_cmd = true },
+            },
+            input_hl = "Title",
+            -- used to highlight the range in the command e.g. '<,>' in '<,>'s
+            range_hl = "FloatBorder",
+        },
+    }, -- }}}
+    -- https://github.com/lukas-reineke/indent-blankline.nvim
+    { 'lukas-reineke/indent-blankline.nvim',
+        main = "ibl", -- {{{
+        -- wait for 20231218 Virtual text in indented word-wrapped area
+        -- https://github.com/neovim/neovim/issues/23108
+        enabled = false,
+        opt = {
+            -- ￨ ｜ ▏
+            indent = { char = '￨', highlight = { "Whitespace" }},
+        },
+        config = function()
+            require("ibl").setup()
         end,
     }, -- }}}
 }, {
