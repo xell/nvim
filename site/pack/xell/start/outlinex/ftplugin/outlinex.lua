@@ -11,6 +11,7 @@ vol.comments:append(':-')
 vol.comments:remove('fb:-')
 vol.formatlistpat = '^\\s*\\d\\+\\.\\s\\+\\|^\\s*[-*+]\\s\\+\\|^\\[^\\ze[^\\]]\\+\\]:\\&^.\\{4\\}'
 vol.breakindentopt = "list:-2"
+vol.iskeyword:append('#')
 -- vol.breakindentopt = "shift:2"
 -- }}}
 
@@ -19,6 +20,18 @@ local vks = vim.keymap.set
 vks('v', '<Leader>b', [[<ESC>`>a**<ESC>`<i**<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>i', [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
+-- https://www.reddit.com/r/neovim/comments/voc9qt/passing_an_initial_search_term_to_telescopes_find/
+-- Telescope current_buffer_fuzzy_find default_text='##title
+vks('n', '<Leader><Leader>t', [[:Telescope current_buffer_fuzzy_find default_text='##title<CR><Esc>]], { buffer = true })
+vks('n', '<Leader><Leader>p', function ()
+    vim.cmd[[w! test.md]]
+    -- https://help.obsidian.md/Extending+Obsidian/Obsidian+URI#Shorthand%20formats
+    vim.system({'open', 'obsidian://vault/Documents/Notes/Notes/test.md'})
+end, { buffer = true })
+vks('n', '<Leader><Leader>P', function ()
+    vim.cmd[[w! test.md]]
+    vim.cmd[[silent !open -a /Applications/Marked\ 2.app/ -- test.md]]
+end, { buffer = true })
 -- }}}
 
 -- notes -- {{{
@@ -132,6 +145,11 @@ vks('n', "<D-'>", function () -- {{{
     local bufnr = vim.fn.bufnr('%')
     local bufname = vim.api.nvim_buf_get_name(bufnr)
 
+    if vim.fn.foldlevel('.') == 0 then
+        vim.api.nvim_err_writeln("There's no fold here.")
+        return
+    end
+
     if not string.find(bufname, 'yode://') then
         -- normal buffer
         local cur_linenr = vim.fn.line('.')
@@ -172,7 +190,9 @@ vks('n', "<D-'>", function () -- {{{
         bi = vim.b.seditor_info
         add_seditor_record(ori_bufnr, bi[4], bi[2], bi[3])
     end
-    vim.print("done")
+    vim.opt_local.filetype = 'outlinex'
+    vim.cmd.normal[[zo]]
+    -- vim.print("done")
     -- vim.opt_local.winbar = '%!luaeval("WinbarText()")'
 end) -- }}}
 
@@ -213,6 +233,8 @@ vks('n', '<D-;>', function () -- {{{
 
                     actual_cursor_line = actual_cursor_line - firstline
                     vim.fn.cursor(actual_cursor_line, 1)
+                    vim.opt_local.filetype = 'outlinex'
+                    vim.cmd.normal[[zv]]
                     return
                 else
                     up_linenr = up_linenr - 1
@@ -222,7 +244,8 @@ vks('n', '<D-;>', function () -- {{{
     end
 end) -- }}}
 
--- %-0{minwid}.{maxwid}{item}
+-- https://nuxsh.is-a.dev/blog/custom-nvim-statusline.html
+local tools = require"tools"
 _G.WinbarText =  function() -- {{{
     if vim.b.seditor_info == nil then
         return '%-t'
@@ -250,7 +273,7 @@ _G.WinbarText =  function() -- {{{
         fold_level = (select(2, get_fold_level(ori_bufnr, up_linenr)))
         if fold_level < cur_fold_level then
             line = vim.api.nvim_buf_get_lines(ori_bufnr, up_linenr - 1, up_linenr, true)[1]
-            line = string.sub((select(1, string.gsub(line,'^ *- ', ''))), 1, item_length) .. ' '
+            line = tools.sub_utf8((select(1, string.gsub(line,'^ *- ', ''))), 1, item_length) .. ' '
             text = '' .. fold_level .. ' ' .. line .. '/ ' .. text
             cur_fold_level = fold_level
         end
@@ -392,4 +415,5 @@ _G.MKDfoldText = function ()
     return line
 end
 -- }}}
+
 -- vim:fdm=marker

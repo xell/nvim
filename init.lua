@@ -159,6 +159,17 @@ vks('n', '<C-Enter>', vim.cmd.WinFullScreen)
 
 -- Mappings and commands {{{
 vks('n', '<M-q>', [[q:]])
+vks('n', 'zkk', function ()
+    local current_foldlevel = vim.fn.foldlevel('.')
+    local line = vim.fn.line('.')
+    while line >= 1 do
+        line = line - 1
+        if vim.fn.foldlevel(line) < current_foldlevel then
+            break
+        end
+    end
+    vim.fn.cursor(line, 1)
+end)
 -- }}}
 
 -- Editing {{{
@@ -460,6 +471,27 @@ require("lazy").setup({
             " nmap <Leader>fL :Lines<CR>
             " nmap <Leader>fw :Windows<CR>
             ]]
+        end,
+    }, -- }}}
+    -- https://github.com/nvim-telescope/telescope-fzf-native.nvim
+    { 'nvim-telescope/telescope-fzf-native.nvim',
+    -- build = 'make', -- {{{
+    -- https://www.reddit.com/r/neovim/comments/13cyyhn/search_within_current_buffer/
+    config = function ()
+        require('telescope').setup {
+            extensions = {
+                fzf = {
+                    fuzzy = true,                    -- false will only do exact matching
+                    override_generic_sorter = true,  -- override the generic sorter
+                    override_file_sorter = true,     -- override the file sorter
+                    case_mode = "smart_case",        -- or "ignore_case" or "respect_case"
+                    -- the default case_mode is "smart_case"
+                }
+            }
+        }
+        -- To get fzf loaded and working with telescope, you need to call
+        -- load_extension, somewhere after setup function:
+        require('telescope').load_extension('fzf')
         end,
     }, -- }}}
     -- https://github.com/debugloop/telescope-undo.nvim/
@@ -840,7 +872,17 @@ require("lazy").setup({
     { "wellle/context.vim",
         init = function () -- {{{
             vg.context_presenter = 'nvim-float'
+            vg.context_add_autocmds = 0 -- slows down in large files
+            vg.context_add_mappings = 0 -- conflicts with yode delbuf
         end,
+        config = function ()
+            vks('n', '<Leader><Leader>c', function ()
+                vim.cmd[[ContextActivate]]
+                vim.cmd[[ContextUpdate]]
+                vim.cmd[[ContextPeek]]
+            end)
+            vks('n', '<Leader><Leader>C', [[:ContextToggleWindow<CR>]])
+        end
     }, -- }}}
     -- https://github.com/tpope/vim-fugitive
     { 'tpope/vim-fugitive',
@@ -851,7 +893,7 @@ require("lazy").setup({
     }, -- }}}
     -- https://github.com/Sam-programs/cmdline-hl.nvim
     { 'Sam-programs/cmdline-hl.nvim',
-        event = 'UiEnter', -- {{{
+        event = 'UiEnter', -- {{{context_add_autocmds
         enabled = false,
         opts = {
             type_signs = {
