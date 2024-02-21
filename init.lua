@@ -836,6 +836,15 @@ require("lazy").setup({
                 deep_pattern = true,
                 -- a list of patterns to open url under cursor
                 extra_patterns = {
+                    {
+                        -- FIXME it's too general
+                        pattern = "([^/ %[]+%.%a%w%w*)",
+                        prefix = "file://" .. string.gsub(vg.xell_notes_root, '\\', '') .. '/Notes/res/',
+                        suffix = '',
+                        file_patterns = "%w+%.md",
+                        excluded_file_patterns = nil,
+                        extra_condition = nil,
+                    },
                     -- {
                     -- 	  pattern = '["]([^%s]*)["]:%s*"[^"]*%d[%d%.]*"',
                     -- 	  prefix = "https://www.npmjs.com/package/",
