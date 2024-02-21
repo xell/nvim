@@ -975,6 +975,16 @@ require("lazy").setup({
             "nvim-telescope/telescope.nvim"
         },
     }, -- }}}
+    -- https://github.com/numToStr/Comment.nvim
+    { 'numToStr/Comment.nvim',
+        opts = { -- {{{
+            -- add any options here
+        },
+        config = function()
+            require('Comment').setup()
+        end,
+        lazy = false,
+    }, -- }}}
 }, {
     dev = {
         path = "~/Developer/vim/scripts",
