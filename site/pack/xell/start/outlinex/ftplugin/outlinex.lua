@@ -35,7 +35,7 @@ vks('n', '<Leader><Leader>P', function ()
 end, { buffer = true })
 -- }}}
 
--- notes -- {{{
+-- comments -- {{{
 -- zoom in to range (b, e) workflow:
 -- if (normal buffer)
 --   if (yode(b, ...) for bufnr exists) ???
@@ -140,6 +140,36 @@ local function is_nested_seditor(bufnr, firstline, lastline) -- {{{
         return 0
     end
 end -- }}}
+
+-- check wrong indentations to quickfix list -- {{{
+local function detect_wrong_indentation()
+    local lastline = vim.api.nvim_buf_line_count(0)
+    local startline, text
+    for i = 1, lastline, 1 do
+        text = vim.api.nvim_buf_get_lines(0, i - 1, i, true)[1]
+        if string.find(text, '^ *- ') then
+            startline= i
+            break
+        end
+    end
+    local bufnr = vim.fn.bufnr('%')
+    local qflist = {}
+    local cur_fold_level, pre_fold_level
+    for i = startline + 1, lastline, 1 do
+        _, cur_fold_level = get_fold_level(bufnr, i)
+        _, pre_fold_level = get_fold_level(bufnr, i - 1)
+
+        if cur_fold_level - pre_fold_level > 1 then
+            local entry = { bufnr = bufnr, lnum = i, col = 1, text = string.sub(vim.fn.getbufoneline(bufnr, i), 1, 20), }
+            table.insert(qflist, entry)
+        end
+    end
+    vim.fn.setqflist(qflist)
+    vim.cmd.cwindow()
+end
+
+vim.api.nvim_buf_create_user_command(0, 'DetectWrongIndentation', detect_wrong_indentation, {})
+-- }}}
 
 -- zoom in, focus
 vks('n', "<D-'>", function () -- {{{
