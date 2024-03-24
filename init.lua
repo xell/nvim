@@ -1005,6 +1005,54 @@ require("lazy").setup({
         end,
         lazy = false,
     }, -- }}}
+    -- https://github.com/IsWladi/Gittory
+    { "IsWladi/Gittory",
+    branch = "main", -- {{{
+    dependencies = {
+        -- {"rcarriga/nvim-notify"}, -- optional
+    },
+    config = true,
+    opts = { -- you can omit this, is the default
+          -- notify = "yes", -- by default "yes":
+          atStartUp = "yes" -- by default "yes": If you want to initialize Gittory when Neovim starts
+    },
+  }, -- }}}
+    -- https://github.com/folke/twilight.nvim
+    { "folke/twilight.nvim",
+    opts = { -- {{{
+        dimming = {
+            alpha = 0.25, -- amount of dimming
+            -- we try to get the foreground from the highlight groups or fallback color
+            color = { "Normal", "#ffffff" },
+            term_bg = "#000000", -- if guibg=NONE, this will be used to calculate text color
+            inactive = false, -- when true, other windows will be fully dimmed (unless they contain the same buffer)
+        },
+        context = 2, -- amount of lines we will try to show around the current line
+        treesitter = false, -- use treesitter when available for the filetype
+        -- treesitter is used to automatically expand the visible text,
+        -- but you can further control the types of nodes that should always be fully expanded
+        expand = { -- for treesitter, we we always try to expand to the top-most ancestor with these types
+            "function",
+            "method",
+            "table",
+            "if_statement",
+        },
+        exclude = {}, -- exclude these filetypes
+    }, -- }}}
+    -- https://github.com/junegunn/limelight.vim
+    { "junegunn/limelight.vim",
+        init = function() -- {{{
+            vg.limelight_paragraph_span = 1
+            vg.limelight_priority = -1
+        end,
+    }, -- }}}
+    -- https://github.com/karb94/neoscroll.nvim
+    { "karb94/neoscroll.nvim",
+        config = function () -- {{{
+            require('neoscroll').setup()
+        end
+    }, -- }}}
+},
 }, {
     dev = {
         path = "~/Developer/vim/scripts",
