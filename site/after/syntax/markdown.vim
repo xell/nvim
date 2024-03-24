@@ -1,3 +1,7 @@
+syntax case ignore
+" syntax clear
+syntax spell toplevel
+
 " https://github.com/neovim/neovim/blob/master/runtime/syntax/markdown.vim
 " https://vi.stackexchange.com/questions/26825/conceal-markdown-links-and-extensions
 syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal

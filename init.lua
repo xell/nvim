@@ -1,9 +1,10 @@
 -- vim:fdm=marker
 -- xell neovim nvim config
---  \  /
---   \/   |--  |    |
---   /\   |--  |    |
---  /  \  |--  |--  |--
+--      _/      _/  _/_/_/_/  _/        _/
+--       _/  _/    _/        _/        _/
+--        _/      _/_/_/    _/        _/
+--     _/  _/    _/        _/        _/
+--  _/      _/  _/_/_/_/  _/_/_/_/  _/_/_/_/
 
 --[[ TODO
 - cursor
@@ -195,6 +196,9 @@ vks('n', '<C-L>', function ()
     if vim.fn.foldlevel('.') > 0 then
         vim.cmd.normal[[zv]]
     end
+    if vim.t.showtabline_ori ~= nil then
+        vim.opt_local.number = false
+    end
 end)
 
 
@@ -299,7 +303,9 @@ require("lazy").setup({
         end,
     }, -- }}}
     -- https://github.com/xiyaowong/fast-cursor-move.nvim remap j k
-    'xiyaowong/fast-cursor-move.nvim',
+    { 'xiyaowong/fast-cursor-move.nvim',
+        -- enabled = false,
+    },
     -- https://github.com/vimpostor/vim-lumen
     { 'vimpostor/vim-lumen',
         config = function () -- {{{
@@ -411,6 +417,9 @@ require("lazy").setup({
                 },
                 mappings = {}
             }
+            vks('n', '<Leader>tm', function ()
+                vim.cmd.MarksToggleSigns(vim.fn.bufnr('%'))
+            end)
         end,
     }, -- }}}
     -- https://github.com/nvim-telescope/telescope.nvim
@@ -424,6 +433,7 @@ require("lazy").setup({
                 i = { ["<S-CR>"] = actions.select_tab_drop },
                 n = { ["<S-CR>"] = actions.select_tab_drop },
             }
+            -- layout https://www.reddit.com/r/neovim/comments/1ar56k0/how_to_see_deeply_nested_file_names_in_telescope/
             require'telescope'.setup {
                 defaults = {
                     path_display = { "truncate" }, -- "smart"
@@ -446,6 +456,10 @@ require("lazy").setup({
                     },
                     grep_string = {
                         mappings = map_s_cr,
+                    },
+                    -- https://github.com/nvim-telescope/telescope.nvim/issues/2115#issuecomment-1366575821
+                    current_buffer_fuzzy_find = {
+
                     },
                 },
             }
@@ -719,6 +733,7 @@ require("lazy").setup({
             mapping = cmp.mapping.preset.insert({
                 ['<C-b>'] = cmp.mapping.scroll_docs(-4),
                 ['<C-f>'] = cmp.mapping.scroll_docs(4),
+                -- https://www.reddit.com/r/neovim/comments/1axmx9e/trigger_completion_suggestions_manually_with/
                 ['<M-Space>'] = cmp.mapping.complete(),
                 ['<C-e>'] = cmp.mapping.abort(),
                 ['<CR>'] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
@@ -955,7 +970,7 @@ require("lazy").setup({
         event = "VeryLazy", -- {{{
         config = function()
             require("chatgpt").setup({
-                api_key_cmd = "op read op://private/OpenAI/credential --no-newline",
+                api_key_cmd = "op read op://Personal/OpenAI/credential --no-newline",
                 openai_params = {
                     model = "gpt-4-turbo-preview",
                     -- model = "gpt-4",
@@ -967,6 +982,11 @@ require("lazy").setup({
                     max_tokens = 3000,
                 },
             })
+            vks('n', '<Leader><Leader>g', [[:ChatGPT<CR>]])
+            vks('n', '<Leader><Leader>G', function ()
+                require("chatgpt.flows.chat").chat:redraw()
+                vim.print("ChatGPT redrew.")
+            end)
         end,
         dependencies = {
             "MunifTanjim/nui.nvim",
@@ -1078,13 +1098,17 @@ vim.api.nvim_create_user_command('Spell', function ()
         vol.spell = true
         vol.spelllang = 'en_gb,cjk'
         -- https://stackoverflow.com/questions/18196399/exclude-capitalized-words-from-vim-spell-check
-        vim.cmd[[syn match myExCapitalWords +\<\w*[A-Z]\K*\>\|'s+ contains=@NoSpell]]
+        -- vim.cmd[[syn match myExCapitalWords +\<\w*[A-Z]\K*\>\|'s+ contains=@NoSpell]]
     end
 end, {})
 
 -- abbrevs
 vks('ca', 'xfn', 'echo expand("%:p")')
 vks('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
+
+-- https://vi.stackexchange.com/questions/25130/close-buffer-in-the-other-instance
+-- https://github.com/vim/vim/blob/master/runtime/pack/dist/opt/editexisting/plugin/editexisting.vim
+-- vim.cmd.runtime('macros/editexisting.vim')
 
 -- }}}
 

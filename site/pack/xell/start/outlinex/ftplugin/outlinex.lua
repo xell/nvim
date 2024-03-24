@@ -20,7 +20,7 @@ local vks = vim.keymap.set
 vks('v', '<Leader>b', [[<ESC>`>a**<ESC>`<i**<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>i', [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
-vks('v', '<Leader>C', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
+vks('v', '<Leader>c', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
 -- https://www.reddit.com/r/neovim/comments/voc9qt/passing_an_initial_search_term_to_telescopes_find/
 -- Telescope current_buffer_fuzzy_find default_text='##title
 vks('n', '<Leader><Leader>t', [[:Telescope current_buffer_fuzzy_find default_text='##title<CR><Esc>]], { buffer = true })
@@ -69,7 +69,7 @@ end, { buffer = true })
 -- }}}
 
 -- TODO
--- use function CreateSeditorByLinenr()
+-- split by first level to several md files to facilitate iphone opening
 
 local yode = require('yode-nvim')
 local t = tostring
@@ -326,6 +326,8 @@ vim.api.nvim_create_autocmd(
     pattern = 'yode://*',
     group = outlinex_aug,
     callback = function()
+        if vim.t.winbar_ori ~= nil then return end
+
         vim.opt_local.winbar = '%!luaeval("WinbarText()")'
 
         if vim.b.seditor_info == nil then return end
