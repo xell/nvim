@@ -7,8 +7,6 @@
 --  _/      _/  _/_/_/_/  _/_/_/_/  _/_/_/_/
 --  NEW
 
-vim.cmd.colorscheme('onehalfdark')
-
 -- Pre and helpers {{{
 local tools = require'tools'
 local function k(keys)
@@ -29,15 +27,6 @@ vim.o.wildignore = '*.o,*.ojb,*.pyc,*.DS_Store,*.db,*.dll,*.exe,*.a'
 vim.o.autochdir = true
 vim.o.updatetime = 1000
 vim.o.modelineexpr = true
--- clipboard-osc52
-vim.o.clipboard = 'unnamedplus'
-
-vim.o.expandtab = true
-vim.o.tabstop = 4
-vim.o.shiftwidth = 4
-vim.opt.whichwrap:append('<,>,[,],l,h')
-vim.opt.nrformats:append('alpha')
-vim.opt.iskeyword:append('-') -- mainly for dictionary lookup
 
 vim.o.shada = "'100,<1000,s500,h" -- ori viminfo
 vim.o.sessionoptions = 'buffers,curdir,folds,globals,help,resize,slash,tabpages,winpos,winsize,localoptions,options'
@@ -117,7 +106,7 @@ end, {})
 
 -- toggle relativenumber
 vim.keymap.set('n', '<Leader>nn', function()
-    vim.wo.relativenumber = not vim.wo.relativenumber:get()
+    vim.wo.relativenumber = not vim.wo.relativenumber
 end)
 
 -- set colorcolumn cc
@@ -302,6 +291,7 @@ vim.keymap.set('n', '<C-Enter>', vim.cmd.WinFullScreen)
 --- }}}
 
 -- Fold {{{
+vim.o.foldmethod = 'marker'
 vim.o.foldcolumn = 'auto' -- nvim-spec
 vim.o.foldlevel = 99
 vim.o.foldlevelstart = -1
@@ -327,9 +317,19 @@ vim.g.markdown_folding = 1
 -- }}}
 
 -- Editing (buffer) {{{
--- map j and k to their original in visual line mode
-vim.cmd [[xnoremap <expr> j mode() ==# 'V' ? 'j' : 'gj']]
-vim.cmd [[xnoremap <expr> k mode() ==# 'V' ? 'k' : 'gk']]
+vim.o.expandtab = true
+vim.o.tabstop = 4
+vim.o.shiftwidth = 4
+vim.opt.whichwrap:append('<,>,[,],l,h')
+vim.opt.nrformats:append('alpha')
+vim.opt.iskeyword:append('-') -- mainly for dictionary lookup
+
+-- clipboard-osc52
+vim.o.clipboard = 'unnamedplus'
+
+-- leave cursor in the end of visual block
+vim.keymap.set('v', 'y', 'ygv<Esc>')
+vim.keymap.set('n', 'P', 'gP')
 
 -- - to g_ last non-blank char
 vim.keymap.set('', '-', 'g_')
@@ -537,4 +537,6 @@ end, {})
 vim.keymap.set('ca', 'xfn', 'echo expand("%:p")')
 vim.keymap.set('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
 -- }}}
+
+require("config.lazy")
 

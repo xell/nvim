@@ -94,7 +94,7 @@ call s:h("SpellCap", s:yellow, "", "undercurl")
 call s:h("SpellLocal", s:yellow, "", "undercurl")
 call s:h("SpellRare", s:yellow, "", "undercurl")
 
-call s:h("StatusLine", s:red, s:cursor_line, "")
+call s:h("StatusLine", s:blue, s:cursor_line, "")
 call s:h("StatusLineNC", s:comment_fg, s:cursor_line, "")
 call s:h("TabLine", s:comment_fg, s:cursor_line, "")
 call s:h("TabLineFill", s:comment_fg, s:cursor_line, "")
