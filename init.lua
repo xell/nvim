@@ -8,6 +8,10 @@
 --  NEW
 
 -- Pre and helpers {{{
+-- https://www.reddit.com/r/neovim/comments/12bmzjk/reduce_neovim_startup_time_with_plugins/
+vim.loader.enable()
+package.path = package.path .. ';' .. vim.fn.expand('$HOME') .. '/.luarocks/share/lua/5.1/?/init.lua;'
+package.path = package.path .. ';' .. vim.fn.expand('$HOME') .. '/.luarocks/share/lua/5.1/?.lua;'
 local tools = require'tools'
 local function k(keys)
     return vim.api.nvim_replace_termcodes(keys, true, true, true)
@@ -81,16 +85,16 @@ vim.diagnostic.config {
     virtual_text = false,
     signs = {
         text = {
-            [vim.diagnostic.severity.ERROR] = "",
-            [vim.diagnostic.severity.WARN] = "",
-            [vim.diagnostic.severity.INFO] = "󰋼",
-            [vim.diagnostic.severity.HINT] = "󰌵",
+            [vim.diagnostic.severity.ERROR] = '',
+            [vim.diagnostic.severity.WARN] = '',
+            [vim.diagnostic.severity.INFO] = '󰋼',
+            [vim.diagnostic.severity.HINT] = '󰌵',
         },
     },
     float = {
-        border = "rounded",
+        border = 'rounded',
         format = function(d)
-            return ("%s (%s) [%s]"):format(d.message, d.source, d.code or d.user_data.lsp.code)
+            return ('%s (%s) [%s]'):format(d.message, d.source, d.code or d.user_data.lsp.code)
         end,
     },
     underline = true,
@@ -101,7 +105,7 @@ vim.diagnostic.config {
 
 -- reload current colorscheme
 vim.api.nvim_create_user_command('ReloadColorscheme', function()
-    vim.cmd.colorscheme(vim.api.nvim_exec2('colorscheme', { output = true })["output"])
+    vim.cmd.colorscheme(vim.api.nvim_exec2('colorscheme', { output = true })['output'])
 end, {})
 
 -- toggle relativenumber
@@ -191,6 +195,8 @@ vim.cmd [[
 
 -- Special settings {{{
 vim.g.netrw_liststyle = 3
+
+vim.g.seditor_table = {}
 
 -- xell Notes -- {{{
 vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob('~/Documents/Notes'))
@@ -294,7 +300,9 @@ vim.keymap.set('n', '<C-Enter>', vim.cmd.WinFullScreen)
 vim.o.foldmethod = 'marker'
 vim.o.foldcolumn = 'auto' -- nvim-spec
 vim.o.foldlevel = 99
-vim.o.foldlevelstart = -1
+vim.o.foldlevelstart = 99
+-- vim.o.foldopen = 'all'
+vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 
 -- toggle fold
 vim.cmd[[nnoremap <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
@@ -538,5 +546,5 @@ vim.keymap.set('ca', 'xfn', 'echo expand("%:p")')
 vim.keymap.set('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
 -- }}}
 
-require("config.lazy")
+require('config.lazy')
 

@@ -1,7 +1,7 @@
 -- vim:foldlevel=1
 return {
     -- https://github.com/xiyaowong/fast-cursor-move.nvim remap j k
-    { 'xiyaowong/fast-cursor-move.nvim',
+    { 'xiyaowong/fast-cursor-move.nvim', -- {{{
         config = function ()
             vim.defer_fn(function ()
                 -- map j and k to their original in visual line mode
@@ -10,7 +10,7 @@ return {
                 vim.cmd[[xnoremap <expr> k mode() =~ '\C[CV]' ? 'k' : 'gk']]
             end, 1000)
         end,
-    },
+    }, -- }}}
 
     -- https://github.com/keaising/im-select.nvim
     { 'keaising/im-select.nvim', -- {{{
@@ -96,7 +96,7 @@ return {
                 multi_windows = true,
                 create_hl_autocmd = true,
             }
-            vim.keymap.set('', '<Leader>/', function()
+            vim.keymap.set('n', '<Leader>/', function()
                 hop.hint_patterns()
             end)
         end,
@@ -203,4 +203,163 @@ return {
             vim.keymap.set('n', 'gx', vim.cmd.URLOpenUnderCursor)
         end,
     }, -- }}}
+    -- https://github.com/kevinhwang91/nvim-ufo
+    { 'kevinhwang91/nvim-ufo', -- {{{
+        dependencies = {
+            'kevinhwang91/promise-async',
+        },
+        config = function()
+            local ftMap = {
+                git = '',
+                outlinex = '',
+                tex = '',
+            }
+            local handler = function(virtText, lnum, endLnum, width, truncate)
+                local newVirtText = {}
+                local suffix = (' ↓ %d '):format(endLnum - lnum)
+                local sufWidth = vim.fn.strdisplaywidth(suffix)
+                local targetWidth = width - sufWidth
+                local curWidth = 0
+                for _, chunk in ipairs(virtText) do
+                    local chunkText = chunk[1]
+                    local chunkWidth = vim.fn.strdisplaywidth(chunkText)
+                    if targetWidth > curWidth + chunkWidth then
+                        table.insert(newVirtText, chunk)
+                    else
+                        chunkText = truncate(chunkText, targetWidth - curWidth)
+                        local hlGroup = chunk[2]
+                        table.insert(newVirtText, { chunkText, hlGroup })
+                        chunkWidth = vim.fn.strdisplaywidth(chunkText)
+                        -- str width returned from truncate() may less than 2nd argument, need padding
+                        if curWidth + chunkWidth < targetWidth then
+                            suffix = suffix .. (' '):rep(targetWidth - curWidth - chunkWidth)
+                        end
+                        break
+                    end
+                    curWidth = curWidth + chunkWidth
+                end
+                table.insert(newVirtText, { suffix, 'MoreMsg' })
+                return newVirtText
+            end
+            require('ufo').setup({
+                open_fold_hl_timeout = 0,
+                provider_selector = function(bufnr, filetype, _)
+                    if vim.bo[bufnr].bt == 'nofile' then
+                        return ''
+                    end
+                    return ftMap[filetype] or { 'treesitter', 'indent' }
+                end,
+                fold_virt_text_handler = handler,
+            })
+            -- Ensure our ufo foldlevel is set for the buffer TODO
+            vim.api.nvim_create_autocmd('BufReadPre', {
+                callback = function()
+                    vim.b.ufo_foldlevel = 0
+                end
+            })
+
+            vim.keymap.set('n', 'zR', require('ufo').openAllFolds)
+            vim.keymap.set('n', 'zM', require('ufo').closeAllFolds)
+            vim.keymap.set('n', 'zx', function()
+                require('ufo').closeAllFolds()
+                vim.cmd.normal [[zv]]
+            end)
+            vim.keymap.set('n', '<Leader>p', require('ufo').peekFoldedLinesUnderCursor)
+            -- -- https://github.com/kevinhwang91/nvim-ufo/issues/150
+            -- ---@param num integer Set the fold level to this number
+            -- local set_buf_foldlevel = function(num)
+            --     vim.b.ufo_foldlevel = num
+            --     require('ufo').closeFoldsWith(num)
+            -- end
+            -- ---@param num integer The amount to change the UFO fold level by
+            -- local change_buf_foldlevel_by = function(num)
+            --     local foldlevel = vim.b.ufo_foldlevel or 0
+            --     -- Ensure the foldlevel can't be set negatively
+            --     if foldlevel + num >= 0 then
+            --         foldlevel = foldlevel + num
+            --     else
+            --         foldlevel = 0
+            --     end
+            --     set_buf_foldlevel(foldlevel)
+            -- end
+            -- -- Keymaps
+            -- vim.keymap.set('n', 'zm', function()
+            --     local count = vim.v.count
+            --     if count == 0 then
+            --         count = 1
+            --     end
+            --     change_buf_foldlevel_by(-(count))
+            -- end, { desc = 'UFO: Fold More' })
+            -- vim.keymap.set('n', 'zr', function()
+            --     local count = vim.v.count
+            --     if count == 0 then
+            --         count = 1
+            --     end
+            --     change_buf_foldlevel_by(count)
+            -- end, { desc = 'UFO: Fold Less' })
+        end,
+    }, -- }}}
+
+    -- https://github.com/xell/yode-nvim
+    { 'xell/yode-nvim', -- {{{
+        dev = true,
+        config = function()
+            -- according to readme, submodule should be used
+            require('yode-nvim').setup({})
+            -- vks({ '' }, '<Leader>yc', vim.cmd.YodeCreateSeditorFloating)
+            -- vks('', '<Leader>yr', vim.cmd.YodeCreateSeditorReplace)
+            -- vks('n', '<Leader>yd', vim.cmd.YodeBufferDelete)
+            vim.cmd[[
+            map <Leader>yc :YodeCreateSeditorFloating<CR>
+            map <Leader>yr :YodeCreateSeditorReplace<CR>
+            nmap <Leader>yd :YodeBufferDelete<cr>
+            ]]
+        end,
+    }, -- }}}
+
+    -- https://github.com/3rd/image.nvim
+    { '3rd/image.nvim', -- {{{
+        cond = vim.fn.has('gui_running') == 0,
+        event = 'VeryLazy',
+        dependencies = {
+            'nvim-treesitter/nvim-treesitter',
+        },
+        opts = {
+            -- backend = 'ueberzug',
+            backend = 'kitty',
+            integrations = {
+                markdown = {
+                    enabled = true,
+                    clear_in_insert_mode = false,
+                    download_remote_images = true,
+                    only_render_image_at_cursor = true,
+                    filetypes = { 'markdown', 'vimwiki', 'outlinex' }, -- markdown extensions (ie. quarto) can go here
+                },
+                neorg = {
+                    enabled = true,
+                    clear_in_insert_mode = false,
+                    download_remote_images = true,
+                    only_render_image_at_cursor = false,
+                    filetypes = { 'norg' },
+                },
+                html = {
+                    enabled = true,
+                },
+                css = {
+                    enabled = true,
+                },
+            },
+            max_width = nil,
+            max_height = nil,
+            max_width_window_percentage = nil,
+            max_height_window_percentage = 50,
+            kitty_method = 'normal',
+            -- kitty_method = 'unicode-placeholders',
+            window_overlap_clear_enabled = false,                                     -- toggles images when windows are overlapped
+            window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', 'scrollview', 'scrollview_sign' },
+            editor_only_render_when_focused = false,                                  -- auto show/hide images when the editor gains/looses focus
+            tmux_show_only_in_active_window = false,                                  -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+            hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp' }, -- render image files as images when opened
+        },
+    },                                                                                -- }}}
 }

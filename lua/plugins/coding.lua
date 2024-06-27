@@ -386,10 +386,71 @@ return {
                             gitsigns.nav_hunk('prev')
                         end
                     end)
-                    map('n', '<leader>hd', gitsigns.diffthis)
-                    map('n', '<leader>hD', function() gitsigns.diffthis('~') end)
+                    map('n', '<Leader>hd', gitsigns.diffthis)
+                    map('n', '<Leader>hD', function() gitsigns.diffthis('~') end)
                 end,
             }
         end
+    }, -- }}}
+
+    -- https://github.com/nvim-treesitter/nvim-treesitter
+    { 'nvim-treesitter/nvim-treesitter', -- {{{
+        build = ':TSUpdate',
+        config = function()
+            require('nvim-treesitter.configs').setup({
+                modules = {},
+                ensure_installed = { 'c', 'lua', 'vim', 'vimdoc', 'query', 'markdown' },
+                -- Install parsers synchronously (only applied to `ensure_installed`)
+                sync_install = false,
+                -- Automatically install missing parsers when entering buffer
+                auto_install = true,
+                -- List of parsers to ignore installing (or 'all')
+                ignore_install = {},
+                highlight = {
+                    enable = true,
+                    additional_vim_regex_highlighting = { 'markdown', 'markdown_line', 'outlinex' },
+                },
+                indent = {
+                    enable = true
+                },
+            })
+            vim.treesitter.language.register('markdown', 'outlinex')
+            -- vim.treesitter.language.register('markdown_inline', 'outlinex')
+        end,
+    }, -- }}}
+    -- https://github.com/stevearc/aerial.nvim
+    { 'stevearc/aerial.nvim', -- {{{
+        opts = {},
+        -- Optional dependencies
+        dependencies = {
+            'nvim-treesitter/nvim-treesitter',
+            'nvim-tree/nvim-web-devicons'
+        },
+        config = function()
+            require('aerial').setup({
+                backends = { 'treesitter', 'lsp', 'markdown', 'man' },
+                -- optionally use on_attach to set keymaps when aerial has attached to a buffer
+                on_attach = function(bufnr)
+                    -- Jump forwards/backwards with '{' and '}'
+                    vim.keymap.set('n', '{', '<cmd>AerialPrev<CR>', { buffer = bufnr })
+                    vim.keymap.set('n', '}', '<cmd>AerialNext<CR>', { buffer = bufnr })
+                end,
+            })
+            -- You probably also want to set a keymap to toggle aerial
+            vim.keymap.set('n', '<Leader><Leader>a', '<cmd>AerialToggle!<CR>')
+            require('telescope').load_extension('aerial')
+            require('telescope').setup({
+                extensions = {
+                    aerial = {
+                        -- Display symbols as <root>.<parent>.<symbol>
+                        show_nesting = {
+                            ['_'] = false, -- This key will be the default
+                            json = true,   -- You can set the option for specific filetypes
+                            yaml = true,
+                        },
+                    },
+                },
+            })
+        end,
     }, -- }}}
 }
