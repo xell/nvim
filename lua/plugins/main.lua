@@ -1,7 +1,7 @@
 -- vim:foldlevel=1
 return {
     -- https://github.com/xiyaowong/fast-cursor-move.nvim remap j k
-    { 'xiyaowong/fast-cursor-move.nvim', 
+    { 'xiyaowong/fast-cursor-move.nvim',
         config = function ()
             vim.defer_fn(function ()
                 -- map j and k to their original in visual line mode
@@ -50,21 +50,6 @@ return {
                 async_switch_im         = true,
             })
         end,
-    }, -- }}}
-
-    -- https://github.com/f-person/auto-dark-mode.nvim
-    { 'f-person/auto-dark-mode.nvim', -- {{{
-        opts = {
-            update_interval = 1000,
-            set_dark_mode = function()
-                vim.o.background = 'dark'
-                vim.cmd('colorscheme onehalfdark')
-            end,
-            set_light_mode = function()
-                vim.o.background = 'light'
-                vim.cmd('colorscheme onehalflight')
-            end,
-        },
     }, -- }}}
 
     -- https://github.com/easymotion/vim-easymotion
@@ -145,5 +130,77 @@ return {
             -- log debug messages to 'auto-save.log' file in neovim cache directory, set to `true` to enable
             debug = false,
         },
+    }, -- }}}
+
+    -- https://github.com/sontungexpt/url-open
+    { 'sontungexpt/url-open', -- {{{
+        event = 'VeryLazy',
+        cmd = 'URLOpenUnderCursor',
+        config = function()
+            local status_ok, url_open = pcall(require, 'url-open')
+            if not status_ok then
+                return
+            end
+            url_open.setup({
+                open_only_when_cursor_on_url = false,
+                highlight_url = {
+                    all_urls = {
+                        enabled = false,
+                        fg = '#21d5ff', -- 'text' or '#rrggbb'
+                        -- fg = 'text', -- text will set underline same color with text
+                        bg = nil,       -- nil or '#rrggbb'
+                        underline = true,
+                    },
+                    cursor_move = {
+                        enabled = false,
+                        fg = '#199eff', -- 'text' or '#rrggbb'
+                        -- fg = 'text', -- text will set underline same color with text
+                        bg = nil,       -- nil or '#rrggbb'
+                        underline = true,
+                    },
+                },
+                deep_pattern = true,
+                -- a list of patterns to open url under cursor
+                extra_patterns = {
+                    {
+                        -- FIXME it's too general
+                        pattern = '([^/ %[]+%.%a%w%w*)',
+                        prefix = 'file://' .. string.gsub(vim.g.xell_notes_root, '\\', '') .. '/Notes/res/',
+                        suffix = '',
+                        file_patterns = '%w+%.md',
+                        excluded_file_patterns = nil,
+                        extra_condition = nil,
+                    },
+                    -- {
+                    -- 	  pattern = '["]([^%s]*)["]:%s*"[^"]*%d[%d%.]*"',
+                    -- 	  prefix = 'https://www.npmjs.com/package/',
+                    -- 	  suffix = '',
+                    -- 	  file_patterns = { 'package%.json' },
+                    -- 	  excluded_file_patterns = nil,
+                    -- 	  extra_condition = function(pattern_found)
+                    -- 	    return not vim.tbl_contains({ 'version', 'proxy' }, pattern_found)
+                    -- 	  end,
+                    -- },
+                    -- so the url will be https://www.npmjs.com/package/[pattern_found]
+
+
+                    -- {
+                    -- 	  pattern = '["]([^%s]*)["]:%s*"[^"]*%d[%d%.]*"',
+                    -- 	  prefix = 'https://www.npmjs.com/package/',
+                    -- 	  suffix = '/issues',
+                    -- 	  file_patterns = { 'package%.json' },
+                    -- 	  excluded_file_patterns = nil,
+                    -- 	  extra_condition = function(pattern_found)
+                    -- 	    return not vim.tbl_contains({ 'version', 'proxy' }, pattern_found)
+                    -- 	  end,
+                    -- },
+                    --
+                    -- so the url will be https://www.npmjs.com/package/[pattern_found]/issues
+                },
+            })
+            -- https://sbulav.github.io/vim/neovim-opening-urls/
+            -- map[''].gx = {'<Cmd>call jobstart(['open', expand('<cfile>')], {'detach': v:true})<CR>'}
+            vim.keymap.set('n', 'gx', vim.cmd.URLOpenUnderCursor)
+        end,
     }, -- }}}
 }

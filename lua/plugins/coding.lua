@@ -124,6 +124,19 @@ return {
         end,
     }, -- }}}
 
+    -- https://github.com/adoyle-h/lsp-toggle.nvim
+    { 'adoyle-h/lsp-toggle.nvim', -- {{{
+        dependencies = {
+            'neovim/nvim-lspconfig',
+        },
+        config = function ()
+            require('lsp-toggle').setup {
+                create_cmds = true, -- Whether to create user commands
+                telescope = false, -- Whether to load telescope extensions
+            }
+        end,
+    }, -- }}}
+
     -- https://github.com/hrsh7th/nvim-cmp
     { 'hrsh7th/nvim-cmp', -- {{{
         -- event = 'InsertEnter',
