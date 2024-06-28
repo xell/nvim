@@ -1,4 +1,4 @@
--- vim:foldlevel=1
+-- vim:
 return {
     -- https://github.com/xiyaowong/fast-cursor-move.nvim remap j k
     { 'xiyaowong/fast-cursor-move.nvim', -- {{{
@@ -8,6 +8,8 @@ return {
                 -- TODO
                 vim.cmd[[xnoremap <expr> j mode() =~ '\C[CV]' ? 'j' : 'gj']]
                 vim.cmd[[xnoremap <expr> k mode() =~ '\C[CV]' ? 'k' : 'gk']]
+                -- vim.keymap.set("n", "j", "(v:count ? 'j' : 'gj')", {expr = true})
+                -- vim.keymap.set("n", "k", "(v:count ? 'k' : 'gk')", {expr = true})
             end, 1000)
         end,
     }, -- }}}
@@ -265,7 +267,7 @@ return {
                 vim.cmd.normal [[zv]]
             end)
             vim.keymap.set('n', '<Leader>p', require('ufo').peekFoldedLinesUnderCursor)
-            -- -- https://github.com/kevinhwang91/nvim-ufo/issues/150
+            -- https://github.com/kevinhwang91/nvim-ufo/issues/150
             -- ---@param num integer Set the fold level to this number
             -- local set_buf_foldlevel = function(num)
             --     vim.b.ufo_foldlevel = num
@@ -297,7 +299,68 @@ return {
             --     end
             --     change_buf_foldlevel_by(count)
             -- end, { desc = 'UFO: Fold Less' })
+            -- -- https://github.com/kevinhwang91/nvim-ufo/issues/42
+            -- local function hateRepeatFold(char)
+            --     local function setScrollOff(val)
+            --         local view = vim.fn.winsaveview()
+            --         vim.wo.so = val
+            --         vim.fn.winrestview(view)
+            --     end
+            --
+            --     local event = require('ufo.lib.event')
+            --     event:emit('setOpenFoldHl')
+            --     vim.keymap.set('n', 'h', function()
+            --         local shouldClose = vim.fn.foldlevel('.') ~= 0
+            --         if shouldClose then
+            --             event:emit('setOpenFoldHl', false)
+            --             setScrollOff(10)
+            --         end
+            --         return shouldClose and 'zc' or 'h'
+            --     end, {buffer = 0, expr = true})
+            --     vim.keymap.set('n', 'l', function()
+            --         local shouldOpen = vim.fn.foldclosed('.') ~= -1
+            --         if shouldOpen then
+            --             event:emit('setOpenFoldHl', false)
+            --             setScrollOff(10)
+            --         end
+            --         return shouldOpen and 'zo' or 'l'
+            --     end, {buffer = 0, expr = true})
+            --     vim.api.nvim_create_autocmd('CursorMoved', {
+            --         group = vim.api.nvim_create_augroup('HateRepeatFoldAug', {}),
+            --         buffer = 0,
+            --         once = true,
+            --         callback = function()
+            --             pcall(vim.keymap.del, 'n', 'h', {buffer = 0})
+            --             pcall(vim.keymap.del, 'n', 'l', {buffer = 0})
+            --             setScrollOff(0)
+            --             event:emit('setOpenFoldHl')
+            --         end
+            --     })
+            --     return 'mzz' .. char
+            -- end
+            --
+            -- for _, c in ipairs({'c', 'o', 'a', 'C', 'O', 'A', 'v'}) do
+            --     vim.keymap.set('n', 'z' .. c, function() return hateRepeatFold(c) end, {expr = true})
+            -- end
         end,
+    }, -- }}}
+    -- https://github.com/m4xshen/autoclose.nvim
+    { 'm4xshen/autoclose.nvim', -- {{{
+        config = function ()
+            require("autoclose").setup({
+                options = {
+                    disabled_filetypes = { "TelescopePrompt" },
+                },
+                keys = {
+                    ["$"] = {
+                        escape = true,
+                        close = true,
+                        pair = "$$",
+                        disabled_filetypes = { 'markdown', 'text' },
+                    },
+                },
+            })
+        end
     }, -- }}}
 
     -- https://github.com/xell/yode-nvim
@@ -362,4 +425,32 @@ return {
             hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp' }, -- render image files as images when opened
         },
     },                                                                                -- }}}
+
+    -- https://github.com/mikavilpas/yazi.nvim
+    { 'mikavilpas/yazi.nvim', -- {{{
+        event = 'VeryLazy',
+        dependencies = {
+            'nvim-lua/plenary.nvim',
+        },
+        keys = {
+            {
+                '<leader>-',
+                function()
+                    require('yazi').yazi()
+                end,
+                desc = 'Open the file manager',
+            },
+            {
+                -- Open in the current working directory
+                '<leader>_',
+                function()
+                    require('yazi').yazi(nil, vim.fn.getcwd())
+                end,
+                desc = "Open the file manager in nvim's working directory",
+            },
+        },
+        opts = {
+            open_for_directories = false,
+        },
+    }, -- }}}
 }

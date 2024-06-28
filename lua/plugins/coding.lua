@@ -1,4 +1,4 @@
--- vim:foldlevel=1
+-- vim:
 return {
     -- https://github.com/neovim/nvim-lspconfig
     { 'neovim/nvim-lspconfig', -- {{{
@@ -123,7 +123,6 @@ return {
             }
         end,
     }, -- }}}
-
     -- https://github.com/adoyle-h/lsp-toggle.nvim
     { 'adoyle-h/lsp-toggle.nvim', -- {{{
         dependencies = {
@@ -150,6 +149,7 @@ return {
             -- 'hrsh7th/vim-vsnip',
             'L3MON4D3/LuaSnip',
             'saadparwaiz1/cmp_luasnip',
+            'onsails/lspkind.nvim',
         }, -- }}}
         config = function()
             -- Set up lspconfig.
@@ -183,6 +183,15 @@ return {
 
             local cmp = require'cmp'
             cmp.setup({ -- {{{
+                formatting = {
+                    format = require('lspkind').cmp_format({
+                        -- options: 'text', 'text_symbol', 'symbol_text', 'symbol'
+                        mode = 'symbol',
+                        maxwidth = 50,
+                        ellipsis_char = '...',
+                        show_labelDetails = true,
+                    })
+                },
                 snippet = {
                     -- REQUIRED - you must specify a snippet engine
                     expand = function(args)
@@ -311,7 +320,6 @@ return {
             }
         },
     }, -- }}}
-
     -- https://github.com/tpope/vim-fugitive
     { 'tpope/vim-fugitive', -- {{{
         config = function()
@@ -417,6 +425,74 @@ return {
             vim.treesitter.language.register('markdown', 'outlinex')
             -- vim.treesitter.language.register('markdown_inline', 'outlinex')
         end,
+    }, -- }}}
+    -- https://github.com/nvim-treesitter/nvim-treesitter-textobjects
+    { 'nvim-treesitter/nvim-treesitter-textobjects', -- {{{
+        event = 'InsertEnter',
+        config = function ()
+            require('nvim-treesitter.configs').setup({
+                highlight = {enable = true, disable = {'latex'}},
+                indent = {enable = true, disable = {'python'}},
+                textobjects = {
+                    move = {
+                        enable = true,
+                        set_jumps = true, -- whether to set jumps in the jumplist
+                        goto_next_start = {
+                            [']m'] = '@function.outer',
+                            [']]'] = {query = '@class.outer', desc = 'Next class start'},
+                            [']s'] = {
+                                query = '@scope',
+                                query_group = 'locals',
+                                desc = 'Next scope'
+                            }
+                        },
+                        goto_previous_start = {
+                            ['[m'] = '@function.outer',
+                            ['[['] = '@class.outer'
+                        },
+                        goto_next_end = {
+                            [']M'] = '@function.outer',
+                            [']['] = '@class.outer'
+                        },
+                        goto_previous_end = {
+                            ['[M'] = '@function.outer',
+                            ['[]'] = '@class.outer'
+                        },
+                        goto_next = {[']d'] = '@conditional.outer'},
+                        goto_previous = {['[d'] = '@conditional.outer'}
+                    },
+                    swap = {
+                        enable = true,
+                        swap_next = {['<leader>wn'] = '@parameter.inner'},
+                        swap_previous = {['<leader>wp'] = '@parameter.inner'}
+                    },
+                    select = {
+                        enable = true,
+                        lookahead = true,
+                        keymaps = {
+                            ['af'] = '@function.outer',
+                            ['if'] = '@function.inner',
+                            ['ac'] = '@class.outer',
+                            ['ic'] = '@class.inner'
+                        },
+                        selection_modes = {
+                            ['@parameter.outer'] = 'v', -- charwise
+                            ['@function.outer'] = 'V', -- linewise
+                            ['@class.outer'] = '<c-v>' -- blockwise
+                        }
+                    }
+                },
+                incremental_selection = {
+                    enable = true,
+                    keymaps = {
+                        init_selection = '<LocalLeader>i',
+                        scope_incremental = '<LocalLeader>i',
+                        node_incremental = '<LocalLeader>n',
+                        node_decremental = '<LocalLeader>p'
+                    }
+                }
+            })
+        end
     }, -- }}}
     -- https://github.com/stevearc/aerial.nvim
     { 'stevearc/aerial.nvim', -- {{{

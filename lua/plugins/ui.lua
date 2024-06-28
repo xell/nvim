@@ -1,4 +1,4 @@
--- vim:foldlevel=1
+-- vim:
 return {
     -- https://github.com/f-person/auto-dark-mode.nvim
     { 'f-person/auto-dark-mode.nvim', -- {{{

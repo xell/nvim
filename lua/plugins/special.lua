@@ -1,4 +1,4 @@
--- vim:foldlevel=1
+-- vim:
 return {
     -- https://github.com/prichrd/netrw.nvim
     { 'prichrd/netrw.nvim', -- {{{

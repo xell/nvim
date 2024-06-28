@@ -1,4 +1,4 @@
--- vim:foldlevel=1
+-- vim:
 return {
     -- https://github.com/nvim-telescope/telescope.nvim
     { 'nvim-telescope/telescope.nvim', -- {{{
@@ -49,11 +49,14 @@ return {
                 },
             }
             vim.cmd[[
-            nnoremap <Leader>fF <cmd>Telescope grep_string search=<CR>
-            " https://github.com/nvim-telescope/telescope.nvim/issues/564#issuecomment-1173167550
-            nnoremap <Leader>fg <cmd>Telescope live_grep<CR>
+            " with prefix ' without fuzzy
+            nnoremap <Leader>fg <cmd>Telescope grep_string search=<CR>
+            " https://github.com/nvim-telescope/telescope.nvim/issues/564#issuecomment-1173167550 allows regex
+            nnoremap <Leader>fG <cmd>Telescope live_grep<CR>
             nnoremap <Leader>fp <cmd>Telescope find_files follow=true<CR>
-            nnoremap <Leader>ff <cmd>Telescope oldfiles<CR>
+            "nnoremap <Leader>ff <cmd>Telescope oldfiles<CR>
+            nnoremap <leader>ff <cmd>Telescope frecency<CR>
+            nnoremap <leader>fF <cmd>Telescope frecency workspace=CWD<CR>
             nnoremap <Leader>fb <cmd>Telescope buffers<CR>
             nnoremap <Leader>fh <cmd>Telescope help_tags<CR>
             nnoremap <Leader>fH <cmd>Telescope heading<CR>
@@ -64,6 +67,7 @@ return {
             nnoremap <Leader>fr <cmd>Telescope registers<CR>
             " https://github.com/nvim-telescope/telescope.nvim/issues/394
             nnoremap <Leader>fv <cmd>Telescope find_files follow=true search_dirs=~/.config/nvim<CR>
+            nnoremap <Leader>fV <cmd>Telescope find_files follow=true search_dirs=~/.local/share/nvim/lazy<CR>
             nnoremap <Leader>fn :Telescope find_files search_dirs=<C-R>=g:xell_notes_root<CR><CR>
             nnoremap <Leader>fl :Telescope current_buffer_fuzzy_find<CR>
             nnoremap <Leader>fR :Telescope resume<CR>
@@ -134,4 +138,20 @@ return {
         end
     }, -- }}}
 
+    -- https://github.com/nvim-telescope/telescope-frecency.nvim
+    { 'nvim-telescope/telescope-frecency.nvim', -- {{{
+        -- to prevent colorscheme highlight problem
+        keys = {{ '<Leader>ff', '<cmd>Telescope frecency<CR>', desc = 'Telescope frecency' }},
+        config = function()
+            require('telescope').setup {
+                extensions = {
+                    frecency = {
+                        matcher = 'fuzzy',
+                        path_display = { 'truncate' },
+                    },
+                }
+            }
+            require('telescope').load_extension'frecency'
+        end,
+    }, -- }}}
 }

@@ -25,8 +25,10 @@ vim.g.maplocalleader = '\\'
 vim.o.ignorecase = true
 vim.o.smartcase = true
 vim.o.incsearch = true
+vim.o.inccommand = 'split'
 vim.o.wrapscan = false
-vim.o.wildignore = '*.o,*.ojb,*.pyc,*.DS_Store,*.db,*.dll,*.exe,*.a'
+vim.o.wildignore = '*.o,*.obj,*.dll,*.exe,*.so,*.a,*.lib,*.pyc,*.pyo,*.pyd,*.swp,*.swo,*.class,*.DS_Store,*.orig,*.db,*.javac,*.pyc,*.aux,*.out,*.toc'
+vim.o.suffixesadd = '.java,.rs,.lua'
 
 vim.o.autochdir = true
 vim.o.updatetime = 1000
@@ -154,15 +156,15 @@ StatuslineActive = function()
         -- ' %<%f %h%y%m%r ',
         vim.opt.fileformat:get() == 'unix' and '' or '[' .. vim.opt.fileformat:get() .. '] ',
         vim.opt.fileencoding:get() == 'utf-8' and '' or '[' .. vim.opt.fileencoding:get() .. '] ',
-        -- (function()
-        --     local fs = vim.fn['fugitive#statusline']()
-        --     if fs ~= '' then
-        --         fs = string.sub(fs, 6, -3)
-        --         return '  ' .. fs .. ' '
-        --     else
-        --         return ''
-        --     end
-        -- end)(),
+        (function()
+            local fs = vim.fn['fugitive#statusline']()
+            if fs ~= '' then
+                fs = string.sub(fs, 6, -3)
+                return '  ' .. fs .. ' '
+            else
+                return ''
+            end
+        end)(),
         '%=%-14.(%l,%c%V%) %L %P ',
     }
 end
@@ -197,6 +199,8 @@ vim.cmd [[
 vim.g.netrw_liststyle = 3
 
 vim.g.seditor_table = {}
+
+vim.opt.diffopt:append('linematch:60')
 
 -- xell Notes -- {{{
 vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob('~/Documents/Notes'))
@@ -233,7 +237,6 @@ vim.keymap.set('n', '<Leader>N', function()
 end)
 vim.keymap.set('n', '<Leader>ne', ':e ' .. xell_main_note .. '<CR>')
 -- }}}
-
 -- }}}
 
 -- Windows and tab {{{
@@ -243,6 +246,10 @@ vim.keymap.set('n', '<M-->', '<C-w>-')
 vim.keymap.set('n', '<M-=>', '<C-w>+')
 vim.keymap.set('n', '<M-,>', '<C-w><')
 vim.keymap.set('n', '<M-.>', '<C-w>>')
+vim.keymap.set("n", "<down>", ":resize +2<cr>")
+vim.keymap.set("n", "<up>", ":resize -2<cr>")
+vim.keymap.set("n", "<right>", ":vertical resize +2<cr>")
+vim.keymap.set("n", "<left>", ":vertical resize -2<cr>")
 
 -- <M-n> goes to the n window
 for i = 1, 10 do
@@ -305,7 +312,7 @@ vim.o.foldlevelstart = 99
 vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 
 -- toggle fold
-vim.cmd[[nnoremap <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
+vim.cmd[[nnoremap <silent> <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
 
 vim.keymap.set('n', 'zkk', function()
     local current_foldlevel = vim.fn.foldlevel('.')
@@ -381,6 +388,11 @@ vim.keymap.set('n', '<Leader>ns', function() vim.fn.setreg('/', '') end)
 vim.keymap.set('n', '<Leader>nh', function() vim.o.hlsearch = false end)
 vim.keymap.set('n', '<Leader>h', function() vim.o.hlsearch = not vim.o.hlsearch end)
 vim.keymap.set('v', '<Leader>/', 'y/<C-r>=@"<CR><CR>')
+vim.api.nvim_create_user_command('Search2LocList', function ()
+    vim.cmd('lvimgrep "' .. vim.fn.getreg('/') .. '" %')
+    vim.cmd.lwindow()
+end, {})
+
 
 -- highlight/blink yank area
 vim.api.nvim_create_autocmd(
@@ -391,6 +403,15 @@ vim.api.nvim_create_autocmd(
         vim.highlight.on_yank({ timeout = 1000 })
     end,
 })
+
+-- toggle conceallevel
+vim.keymap.set('n', '<Leader>L', function ()
+    if vim.wo.conceallevel == 2 then
+        vim.wo.conceallevel = 0
+    elseif vim.wo.conceallevel == 0 then
+        vim.wo.conceallevel = 2
+    end
+end)
 
 -- while opening file, jump to last known cursor position
 -- :h lua-guide-autocommands-group
@@ -521,21 +542,19 @@ end, {})
 -- spell including cjk
 -- https://stackoverflow.com/questions/18196399/exclude-capitalized-words-from-vim-spell-check
 -- vim.cmd[[syn match myCapitalWords +\<\w*[A-Z]\K*\>\|'s+ contains=@NoSpell]]
-vim.api.nvim_create_user_command('SpellGB', function()
-    if vim.wo.spell then
-        vim.wo.spell = false
+local function toggle_spell(eng_dialect)
+    if vim.o.spell then
+        vim.o.spell = false
     else
-        vim.wo.spell = true
-        vim.wo.spelllang = 'en_gb,cjk'
+        vim.o.spell = true
+        vim.bo.spelllang = 'en_' .. eng_dialect .. ',cjk'
     end
+end
+vim.api.nvim_create_user_command('SpellGB', function()
+    toggle_spell('gb')
 end, {})
 vim.api.nvim_create_user_command('SpellUS', function()
-    if vim.wo.spell then
-        vim.wo.spell = false
-    else
-        vim.wo.spell = true
-        vim.wo.spelllang = 'en_us,cjk'
-    end
+    toggle_spell('us')
 end, {})
 
 
