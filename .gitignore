@@ -1,3 +1,4 @@
 init-old.lua
 lazy-lock.json
 spell
+lua/test.lua

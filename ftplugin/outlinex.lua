@@ -183,7 +183,7 @@ vks('n', "<M-'>", function () -- {{{
     local bufnr = vim.fn.bufnr('%')
     local bufname = vim.api.nvim_buf_get_name(bufnr)
 
-    if vim.fn.foldlevel('.') == 0 then
+    if vim.call('foldlevel', '.') == 0 then
         vim.api.nvim_err_writeln("There's no fold here.")
         return
     end
@@ -429,7 +429,7 @@ end
 -- }}}
 
 -- ufo foldtext {{{
-local handler_item = function(virtText, lnum, endLnum, width, truncate)
+local handler_item = function(virtText, lnum, endLnum, _, _)
     local line_head1 = virtText[1][1]
     local line_head2 = virtText[2][1]
 

@@ -315,7 +315,7 @@ vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 vim.cmd[[nnoremap <silent> <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
 
 vim.keymap.set('n', 'zkk', function()
-    local current_foldlevel = vim.fn.foldlevel('.')
+    local current_foldlevel = vim.call('foldlevel', '.')
     local line = vim.fn.line('.')
     while line >= 1 do
         line = line - 1
@@ -323,7 +323,7 @@ vim.keymap.set('n', 'zkk', function()
             break
         end
     end
-    vim.fn.cursor(line, '.')
+    vim.call('cursor', { line, '.' })
 end)
 
 -- official markdown fold
@@ -348,14 +348,17 @@ vim.keymap.set('n', 'P', 'gP')
 
 -- - to g_ last non-blank char
 vim.keymap.set('', '-', 'g_')
+-- swap ^ and 0 for convenience
+vim.keymap.set('', '0', '^')
+vim.keymap.set('', '^', '0')
 
 -- move in insert mode
-vim.keymap.set('i', '<M-h>', '<Left>')
-vim.keymap.set('i', '<M-l>', '<Right>')
+vim.keymap.set({ 'i', 'c' }, '<M-h>', '<Left>')
+vim.keymap.set({ 'i', 'c' }, '<M-l>', '<Right>')
+vim.keymap.set({ 'i', 'c' }, '<M-6>', '<Home>')
+vim.keymap.set({ 'i', 'c' }, '<M-4>', '<End>')
 vim.keymap.set('i', '<M-->', '<PageDown>')
 vim.keymap.set('i', '<M-=>', '<PageUp>')
-vim.keymap.set('i', '<M-6>', '<Home>')
-vim.keymap.set('i', '<M-4>', '<End>')
 
 -- "reload" buffer
 vim.keymap.set('n', '<M-e>', '<cmd>e %<CR>')
@@ -363,7 +366,7 @@ vim.keymap.set('n', '<M-e>', '<cmd>e %<CR>')
 vim.keymap.set('n', '<M-C-l>', function()
     vim.t.lbr = vim.wo.linebreak
     vim.bo.filetype = vim.o.filetype
-    if vim.fn.foldlevel('.') > 0 then
+    if vim.call('foldlevel', '.') > 0 then
         vim.cmd.normal [[zv]]
     end
     -- WriteRoom
@@ -444,6 +447,7 @@ vim.keymap.set('v', '<Leader>[', [[<ESC>`>a]<ESC>`<i[<ESC>`>ll]])
 vim.keymap.set('v', '<Leader>{', [[<ESC>`>a}<ESC>`<i{<ESC>`>ll]])
 vim.keymap.set('v', '<Leader>$', [[<ESC>`>a$<ESC>`<i$<ESC>`>ll]])
 vim.keymap.set('v', '<Leader>"', [[<ESC>`>a"<ESC>`<i"<ESC>`>ll]])
+vim.keymap.set('v', "<Leader>'", [[<ESC>`>a'<ESC>`<i'<ESC>`>ll]])
 
 -- https://vi.stackexchange.com/questions/25130/close-buffer-in-the-other-instance
 -- https://github.com/vim/vim/blob/master/runtime/pack/dist/opt/editexisting/plugin/editexisting.vim
@@ -470,6 +474,7 @@ vim.api.nvim_create_autocmd({ 'FocusLost' }, {
 
 -- Commands {{{
 vim.keymap.set('n', '<M-q>', [[q:]])
+vim.keymap.set('n', 'qq', [[q:]])
 
 -- command mode to search
 vim.keymap.set('c', '<C-k>', '<Up>')

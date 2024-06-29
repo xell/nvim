@@ -4,12 +4,9 @@ return {
     { 'xiyaowong/fast-cursor-move.nvim', -- {{{
         config = function ()
             vim.defer_fn(function ()
-                -- map j and k to their original in visual line mode
-                -- TODO
-                vim.cmd[[xnoremap <expr> j mode() =~ '\C[CV]' ? 'j' : 'gj']]
-                vim.cmd[[xnoremap <expr> k mode() =~ '\C[CV]' ? 'k' : 'gk']]
-                -- vim.keymap.set("n", "j", "(v:count ? 'j' : 'gj')", {expr = true})
-                -- vim.keymap.set("n", "k", "(v:count ? 'k' : 'gk')", {expr = true})
+                -- map j and k to original in visual linewise & blockwise modes
+                vim.cmd[[xnoremap <expr> j mode() =~ 'V\\|' ? 'j' : 'gj']]
+                vim.cmd[[xnoremap <expr> k mode() =~ 'V\\|' ? 'k' : 'gk']]
             end, 1000)
         end,
     }, -- }}}
