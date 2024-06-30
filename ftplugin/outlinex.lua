@@ -25,16 +25,16 @@ vks('v', '<Leader>c', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>h', [[<ESC>`>a==}<ESC>`<i{==<ESC>`>ll]], { buffer = true })
 -- https://www.reddit.com/r/neovim/comments/voc9qt/passing_an_initial_search_term_to_telescopes_find/
 -- Telescope current_buffer_fuzzy_find default_text='##title
-vks('n', '<Leader><Leader>t', [[:Telescope current_buffer_fuzzy_find default_text='##title<CR><Esc>]], { buffer = true })
+vks('n', '<Leader><Leader>t', [[:Telescope current_buffer_fuzzy_find default_text='##title<CR><Esc>]], { buffer = true, desc = 'Telescope ##title' })
 vks('n', '<Leader><Leader>p', function ()
     vim.cmd[[w! test.md]]
     -- https://help.obsidian.md/Extending+Obsidian/Obsidian+URI#Shorthand%20formats
     vim.system({'open', 'obsidian://vault/Documents/Notes/Notes/test.md'})
-end, { buffer = true })
+end, { buffer = true, desc = 'Open in Obsidian' })
 vks('n', '<Leader><Leader>P', function ()
     vim.cmd[[w! test.md]]
     vim.cmd[[silent !open -a /Applications/Marked\ 2.app/ -- test.md]]
-end, { buffer = true })
+end, { buffer = true, desc = 'Open in Marked 2' })
 -- }}}
 
 -- TODO
@@ -344,7 +344,7 @@ vim.api.nvim_create_autocmd(
 
         local cur_fold_level = (select(2, get_fold_level(ori_bufnr, cur_line)))
 
-        vim.keymap.set('n', ',g0', yode.bufferDelete, { buffer = true })
+        vim.keymap.set('n', ',g0', yode.bufferDelete, { buffer = true, desc = 'Goto original' })
 
         local up_linenr = cur_line - 1
         local up_fold_level

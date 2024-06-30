@@ -6,10 +6,10 @@ return {
             -- local lspconfig = require('lspconfig')
 
             -- Global mappings.
-            vim.keymap.set('n', '<Leader><Leader>e', vim.diagnostic.open_float)
+            vim.keymap.set('n', '<Leader><Leader>e', vim.diagnostic.open_float, { desc = 'Diagnostic info' })
             vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
             vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
-            vim.keymap.set('n', '<Leader><Leader>q', vim.diagnostic.setloclist)
+            vim.keymap.set('n', '<Leader><Leader>q', vim.diagnostic.setloclist, { desc = 'Diagnostic loclist' })
             -- Use LspAttach autocommand to only map the following keys
             -- after the language server attaches to the current buffer
             vim.api.nvim_create_autocmd('LspAttach', {
@@ -22,22 +22,22 @@ return {
 
                     -- Buffer local mappings.
                     -- See `:help vim.lsp.*` for documentation on any of the below functions
-                    local opts = { buffer = ev.buf }
-                    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-                    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-                    vim.keymap.set('n', '<Leader><Leader>h', vim.lsp.buf.hover, opts)
-                    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-                    vim.keymap.set('n', '<Leader><Leader>k', vim.lsp.buf.signature_help, opts)
-                    vim.keymap.set('n', '<Leader><Leader>wa', vim.lsp.buf.add_workspace_folder, opts)
-                    vim.keymap.set('n', '<Leader><Leader>wr', vim.lsp.buf.remove_workspace_folder, opts)
+                    -- local opts = { buffer = ev.buf }
+                    vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, { buffer = ev.buf, desc = 'LSP declaration' })
+                    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { buffer = ev.buf, desc = 'LSP definition' })
+                    vim.keymap.set('n', '<Leader><Leader>h', vim.lsp.buf.hover, { buffer = ev.buf, desc = 'LSP hover' })
+                    vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, { buffer = ev.buf, desc = 'LSP implementation' })
+                    vim.keymap.set('n', '<Leader><Leader>k', vim.lsp.buf.signature_help, { buffer = ev.buf, desc = 'LSP signature_help' })
+                    vim.keymap.set('n', '<Leader><Leader>wa', vim.lsp.buf.add_workspace_folder, { buffer = ev.buf, desc = 'LSP add workspace folder' })
+                    vim.keymap.set('n', '<Leader><Leader>wr', vim.lsp.buf.remove_workspace_folder, { buffer = ev.buf, desc = 'LSP remove workspace folder' })
                     vim.keymap.set('n', '<Leader><Leader>wl', function()
                         print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-                    end, opts)
-                    vim.keymap.set('n', '<Leader><Leader>D', vim.lsp.buf.type_definition, opts)
-                    vim.keymap.set('n', '<Leader><Leader>n', vim.lsp.buf.rename, opts)
-                    vim.keymap.set({ 'n', 'v' }, '<Leader><Leader>ca', vim.lsp.buf.code_action, opts)
-                    vim.keymap.set('n', '<Leader><Leader>r', vim.lsp.buf.references, opts)
-                    vim.keymap.set('n', '<Leader><Leader>f', function() vim.lsp.buf.format { async = true } end, opts)
+                    end, { buffer = ev.buf, desc = 'LSP list workspace folder' })
+                    vim.keymap.set('n', '<Leader><Leader>D', vim.lsp.buf.type_definition, { buffer = ev.buf, desc = 'LSP type definition' })
+                    vim.keymap.set('n', '<Leader><Leader>n', vim.lsp.buf.rename, { buffer = ev.buf, desc = 'LSP rename' })
+                    vim.keymap.set({ 'n', 'v' }, '<Leader><Leader>ca', vim.lsp.buf.code_action, { buffer = ev.buf, desc = 'LSP code action' })
+                    vim.keymap.set('n', '<Leader><Leader>r', vim.lsp.buf.references, { buffer = ev.buf, desc = 'LSP references' })
+                    vim.keymap.set('n', '<Leader><Leader>f', function() vim.lsp.buf.format { async = true } end, { buffer = ev.buf, desc = 'LSP buf format' })
                 end,
             })
 
@@ -136,6 +136,53 @@ return {
         end,
     }, -- }}}
 
+    -- https://github.com/rachartier/tiny-inline-diagnostic.nvim
+    { 'rachartier/tiny-inline-diagnostic.nvim', -- {{{
+        -- event = 'VeryLazy',
+        config = function()
+            -- vim.opt.updatetime = 100
+            require('tiny-inline-diagnostic').setup({
+                signs = {
+                    left = ({'', ''})[1],
+                    right = ({'', ''})[1],
+                    diag = '●',
+                    arrow = '    ',
+                    vertical = ' │',
+                    vertical_end = ' └'
+                },
+                hi = {
+                    error = 'DiagnosticError',
+                    warn = 'DiagnosticWarn',
+                    info = 'DiagnosticInfo',
+                    hint = 'DiagnosticHint',
+                    arrow = 'NonText',
+                    background = 'None', -- Should be 'None' or a hexadecimal color (#RRGGBB)
+                },
+                blend = {
+                    factor = 0.27,
+                },
+                options = {
+                    clear_on_insert = false,
+                    --- When overflow='wrap', when the message is too long, it is then displayed on multiple lines.
+                    overflow = 'wrap',
+                    --- Enable it if you want to always have message with `after` characters length.
+                    break_line = {
+                        enabled = false,
+                        after = 30,
+                    }
+                },
+            })
+            local inline_diagnostic = vim.api.nvim_create_augroup('inlineDiagnostic', { clear = true })
+            vim.api.nvim_create_autocmd('LspAttach', {
+                pattern = '*',
+                group = inline_diagnostic,
+                callback = function(_)
+                    require('tiny-inline-diagnostic').change('None', 0.27)
+                end,
+            })
+        end
+    }, -- }}}
+
     -- https://github.com/hrsh7th/nvim-cmp
     { 'hrsh7th/nvim-cmp', -- {{{
         -- event = 'InsertEnter',
@@ -177,8 +224,8 @@ return {
                 local line, col = unpack(vim.api.nvim_win_get_cursor(0))
                 return col ~= 0 and
                     vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]
-                    :sub(col, col)
-                    :match('%s') == nil
+                        :sub(col, col)
+                        :match('%s') == nil
             end
 
             local cmp = require'cmp'
@@ -235,9 +282,7 @@ return {
                 sources = cmp.config.sources({
                     { name = 'nvim_lsp' },
                     { name = 'luasnip' }, -- For luasnip users.
-                }, {
-                    { name = 'buffer' },
-                })
+                }, { { name = 'buffer' }, })
             })
 
             -- https://github.com/hrsh7th/nvim-cmp/issues/1652
@@ -258,8 +303,8 @@ return {
                         trailing_slash = true,
                     },
                 } }, { {
-                    name = 'cmdline'
-                } }),
+                        name = 'cmdline',
+                    } }),
                 matching = { disallow_symbol_nonprefix_matching = false },
             })
             -- }}}
@@ -323,8 +368,8 @@ return {
     -- https://github.com/tpope/vim-fugitive
     { 'tpope/vim-fugitive', -- {{{
         config = function()
-            vim.keymap.set('n', '<Leader>gs', vim.cmd.G)
-            vim.keymap.set('n', '<Leader>gd', vim.cmd.Gvdiffsplit)
+            vim.keymap.set('n', '<Leader>gs', vim.cmd.G, { desc = 'Open git status' })
+            vim.keymap.set('n', '<Leader>gd', vim.cmd.Gvdiffsplit, { desc = 'Open git diff vert' })
         end,
     }, -- }}}
     -- https://github.com/lewis6991/gitsigns.nvim

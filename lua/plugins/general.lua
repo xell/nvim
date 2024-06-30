@@ -33,8 +33,8 @@ return {
                 default_command         = '/usr/local/bin/im-select',
 
                 -- Restore the default input method state when the following events are triggered
-                -- set_default_events = { 'VimEnter', 'FocusGained', 'InsertLeave', 'CmdlineLeave' },
-                set_default_events      = { 'VimEnter', 'InsertLeave', 'CmdlineLeave' },
+                set_default_events = { 'VimEnter', 'FocusGained', 'InsertLeave', 'CmdlineLeave' },
+                -- set_default_events      = { 'VimEnter', 'InsertLeave', 'CmdlineLeave' },
 
                 -- Restore the previous used input method state when the following events
                 -- are triggered, if you don't want to restore previous used im in Insert mode,
@@ -97,7 +97,7 @@ return {
             }
             vim.keymap.set('n', '<Leader>/', function()
                 hop.hint_patterns()
-            end)
+            end, { desc = 'Hop hint patterns' })
         end,
     }, -- }}}
 
@@ -263,7 +263,7 @@ return {
                 require('ufo').closeAllFolds()
                 vim.cmd.normal [[zv]]
             end)
-            vim.keymap.set('n', '<Leader>p', require('ufo').peekFoldedLinesUnderCursor)
+            vim.keymap.set('n', '<Leader>p', require('ufo').peekFoldedLinesUnderCursor, { desc = 'Peek fold content by UFO' })
             -- https://github.com/kevinhwang91/nvim-ufo/issues/150
             -- ---@param num integer Set the fold level to this number
             -- local set_buf_foldlevel = function(num)
@@ -353,7 +353,13 @@ return {
                         escape = true,
                         close = true,
                         pair = "$$",
-                        disabled_filetypes = { 'markdown', 'text' },
+                        disabled_filetypes = { 'markdown', 'text', 'outlinex' },
+                    },
+                    ["'"] = {
+                        escape = true,
+                        close = true,
+                        pair = "''",
+                        disabled_filetypes = { 'markdown', 'text', 'outlinex' },
                     },
                 },
             })
@@ -415,13 +421,26 @@ return {
             max_height_window_percentage = 50,
             kitty_method = 'normal',
             -- kitty_method = 'unicode-placeholders',
-            window_overlap_clear_enabled = false,                                     -- toggles images when windows are overlapped
+            window_overlap_clear_enabled = true,                                     -- toggles images when windows are overlapped
             window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', 'scrollview', 'scrollview_sign' },
             editor_only_render_when_focused = false,                                  -- auto show/hide images when the editor gains/looses focus
             tmux_show_only_in_active_window = false,                                  -- auto show/hide images in the correct Tmux window (needs visual-activity off)
             hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp' }, -- render image files as images when opened
         },
     },                                                                                -- }}}
+
+    { 'folke/which-key.nvim', -- {{{
+        event = 'VeryLazy',
+        init = function()
+            vim.o.timeout = true
+            vim.o.timeoutlen = 500 -- 1000
+        end,
+        opts = {
+            -- your configuration comes here
+            -- or leave it empty to use the default settings
+            -- refer to the configuration section below
+        }
+    }, -- }}}
 
     -- https://github.com/mikavilpas/yazi.nvim
     { 'mikavilpas/yazi.nvim', -- {{{

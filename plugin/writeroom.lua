@@ -3,6 +3,8 @@
 -- number
 -- lbr?
 
+vim.g.writeroom_win_width = 85
+
 function Start_writeroom() -- {{{
     -- Get the current tabpage
     local tabpage = vim.api.nvim_get_current_tabpage()
@@ -27,7 +29,7 @@ function Start_writeroom() -- {{{
     vim.t.fillchars_vert_ori = tostring(vim.opt.fillchars:get()['vert'])
     vim.opt.fillchars:remove('vert')
     vim.opt.fillchars:prepend{ vert = ' ' }
--- se fillchars=vert:\ 
+    -- se fillchars=vert:\ 
 
     -- setup laststatus
     vim.t.laststatus_ori = 2
@@ -35,7 +37,6 @@ function Start_writeroom() -- {{{
 
     -- width
     local width_ori = vim.opt.columns:get()
-    vim.g.writeroom_win_width = 85
     if width_ori > (vim.g.writeroom_win_width + 6) then
         local sidewin_width = math.floor((width_ori - vim.g.writeroom_win_width) / 2)
         vim.cmd.vsplit()
@@ -168,5 +169,20 @@ end -- }}}
 
 vim.api.nvim_create_user_command('WRS', Start_writeroom, {})
 vim.api.nvim_create_user_command('WRE', Exit_writeroom, {})
+
+local function centering_single_window()
+    local width_ori = vim.opt.columns:get()
+    local sidewin_width = math.floor((width_ori - vim.g.writeroom_win_width) / 2)
+    vim.cmd.vsplit()
+    vim.cmd.vsplit()
+    vim.cmd.normal[[1\<C-w>]]
+    vim.api.nvim_win_set_width(0, sidewin_width)
+    vim.cmd.enew()
+    vim.cmd.normal[[3\<C-w>]]
+    vim.api.nvim_win_set_width(0, sidewin_width)
+    vim.cmd.enew()
+    vim.cmd.normal[[2\<C-w>]]
+end
+vim.api.nvim_create_user_command('CenteringSingleWindow', centering_single_window, {})
 
 -- vim:fdm=marker

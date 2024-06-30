@@ -31,7 +31,7 @@ vim.o.wildignore = '*.o,*.obj,*.dll,*.exe,*.so,*.a,*.lib,*.pyc,*.pyo,*.pyd,*.swp
 vim.o.suffixesadd = '.java,.rs,.lua'
 
 vim.o.autochdir = true
-vim.o.updatetime = 1000
+vim.o.updatetime = 500
 vim.o.modelineexpr = true
 
 vim.o.shada = "'100,<1000,s500,h" -- ori viminfo
@@ -87,10 +87,10 @@ vim.diagnostic.config {
     virtual_text = false,
     signs = {
         text = {
-            [vim.diagnostic.severity.ERROR] = '',
-            [vim.diagnostic.severity.WARN] = '',
-            [vim.diagnostic.severity.INFO] = '󰋼',
-            [vim.diagnostic.severity.HINT] = '󰌵',
+            [vim.diagnostic.severity.ERROR] =    '',
+            [vim.diagnostic.severity.WARN]  =    '',
+            [vim.diagnostic.severity.INFO]  =    '󰋼',
+            [vim.diagnostic.severity.HINT]  = ({ '', '', '󰌵' })[1]
         },
     },
     float = {
@@ -113,7 +113,7 @@ end, {})
 -- toggle relativenumber
 vim.keymap.set('n', '<Leader>nn', function()
     vim.wo.relativenumber = not vim.wo.relativenumber
-end)
+end, { desc = 'Toggle relative number' })
 
 -- set colorcolumn cc
 vim.keymap.set('n', '<Leader>hc', function()
@@ -126,7 +126,7 @@ vim.keymap.set('n', '<Leader>hc', function()
         end
     end
     vim.opt.colorcolumn:append('' .. col)
-end)
+end, { desc = 'Add or remove colorcolumn' })
 
 -- statusline {{{
 -- let g:mystatusline1 = '\ %{winnr()}\ %<%f\ %h%y%m%r\ [%{&ff}]\ [%{&fenc}]'
@@ -234,8 +234,8 @@ vim.keymap.set('n', '<Leader>N', function()
     else
         vim.cmd('tabe ' .. xell_main_note)
     end
-end)
-vim.keymap.set('n', '<Leader>ne', ':e ' .. xell_main_note .. '<CR>')
+end, { desc = 'Note in new tab' })
+vim.keymap.set('n', '<Leader>ne', ':e ' .. xell_main_note .. '<CR>', { desc = 'Note in current tab' })
 -- }}}
 -- }}}
 
@@ -274,20 +274,20 @@ end, { silent = true })
 vim.keymap.set('n', '\\', '<C-w>W')
 
 -- split
-vim.keymap.set('n', '<Leader>s', vim.cmd.split)
-vim.keymap.set('n', '<Leader>v', vim.cmd.vsplit)
-vim.keymap.set('n', '<Leader>S', vim.cmd.new)
-vim.keymap.set('n', '<Leader>V', vim.cmd.vnew)
+vim.keymap.set('n', '<Leader>s', vim.cmd.split, { desc = 'Split U/D' })
+vim.keymap.set('n', '<Leader>v', vim.cmd.vsplit, { desc = 'Split L/R' })
+vim.keymap.set('n', '<Leader>S', vim.cmd.new, { desc = 'Split U/D new' })
+vim.keymap.set('n', '<Leader>V', vim.cmd.vnew, { desc = 'split L/R new' })
 
 -- close
-vim.keymap.set('n', '<Leader>c', '<C-w>c')
-vim.keymap.set('n', '<Leader>o', '<C-w>o')
+vim.keymap.set('n', '<Leader>c', '<C-w>c', { desc = 'Close current window' })
+vim.keymap.set('n', '<Leader>o', '<C-w>o', { desc = 'Close other windows' })
 
 -- open window arrangment
-vim.keymap.set('n', '<Leader>wh', function() vim.cmd [[topleft vertical split]] end)
-vim.keymap.set('n', '<Leader>wj', function() vim.cmd [[botright split]] end)
-vim.keymap.set('n', '<Leader>wk', function() vim.cmd [[topleft split]] end)
-vim.keymap.set('n', '<Leader>wl', function() vim.cmd [[botright vertical split]] end)
+vim.keymap.set('n', '<Leader>wh', function() vim.cmd [[topleft vertical split]] end, { desc = 'Split far left' })
+vim.keymap.set('n', '<Leader>wj', function() vim.cmd [[botright split]] end, { desc = 'Split far bottom' })
+vim.keymap.set('n', '<Leader>wk', function() vim.cmd [[topleft split]] end, { desc = 'Split far top' })
+vim.keymap.set('n', '<Leader>wl', function() vim.cmd [[botright vertical split]] end, { desc = 'Split far right' })
 
 -- tab, next and previous
 vim.keymap.set('n', '<M-t>', ':tabnew<CR>')
@@ -295,7 +295,7 @@ vim.keymap.set('n', '<M-w>', ':tabclose')
 vim.keymap.set('n', '<M-[>', 'gT')
 vim.keymap.set('n', '<M-]>', 'gt')
 for i = 1, 9, 1 do
-    vim.keymap.set('n', '<Leader>' .. i, i .. 'gt')
+    vim.keymap.set('n', '<Leader>' .. i, i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
 end
 
 -- window full screen plugin
@@ -324,7 +324,7 @@ vim.keymap.set('n', 'zkk', function()
         end
     end
     vim.call('cursor', { line, '.' })
-end)
+end, { desc = 'Goto parent fold' })
 
 -- official markdown fold
 vim.g.markdown_folding = 1
@@ -345,6 +345,13 @@ vim.o.clipboard = 'unnamedplus'
 -- leave cursor in the end of visual block
 vim.keymap.set('v', 'y', 'ygv<Esc>')
 vim.keymap.set('n', 'P', 'gP')
+
+-- select pasted content
+vim.cmd[[nnoremap <expr> g<C-v> '`[' . getregtype()[0] . '`]']]
+
+-- indent the just pasted content
+vim.keymap.set('n', '<Leader>=', '`[V`]==', { desc = 'Indent just pasted' })
+vim.keymap.set('n', '<Leader>P', 'p`[V`]==', { desc = 'Paste and indent' })
 
 -- - to g_ last non-blank char
 vim.keymap.set('', '-', 'g_')
@@ -387,10 +394,10 @@ vim.keymap.set('', '<C-k>', '<C-b>')
 vim.keymap.set('', '<C-j>', '<C-f>')
 
 -- search
-vim.keymap.set('n', '<Leader>ns', function() vim.fn.setreg('/', '') end)
-vim.keymap.set('n', '<Leader>nh', function() vim.o.hlsearch = false end)
-vim.keymap.set('n', '<Leader>h', function() vim.o.hlsearch = not vim.o.hlsearch end)
-vim.keymap.set('v', '<Leader>/', 'y/<C-r>=@"<CR><CR>')
+vim.keymap.set('n', '<Leader>ns', function() vim.fn.setreg('/', '') end, { desc = 'Clear search' })
+vim.keymap.set('n', '<Leader>nh', function() vim.o.hlsearch = false end, { desc = 'Hide search' })
+vim.keymap.set('n', '<Leader>h', function() vim.o.hlsearch = not vim.o.hlsearch end, { desc = 'Hide/show search' })
+vim.keymap.set('v', '<Leader>/', 'y/<C-r>=@"<CR><CR>', { desc = 'Search selected' })
 vim.api.nvim_create_user_command('Search2LocList', function ()
     vim.cmd('lvimgrep "' .. vim.fn.getreg('/') .. '" %')
     vim.cmd.lwindow()
@@ -414,7 +421,7 @@ vim.keymap.set('n', '<Leader>L', function ()
     elseif vim.wo.conceallevel == 0 then
         vim.wo.conceallevel = 2
     end
-end)
+end, { desc = 'Toggle conceallevel 0/2' })
 
 -- while opening file, jump to last known cursor position
 -- :h lua-guide-autocommands-group
@@ -500,8 +507,8 @@ local function move_cursor_to_link(backward)
     local link_pattern = vim.b.link_pattern or vim.g.link_pattern
     vim.fn.search(link_pattern, 's' .. backward)
 end
-vim.keymap.set('n', 'gn', function() move_cursor_to_link('') end)
-vim.keymap.set('n', 'gN', function() move_cursor_to_link('b') end)
+vim.keymap.set('n', '<Leader>gn', function() move_cursor_to_link('') end, { desc = 'Goto next link' })
+vim.keymap.set('n', '<Leader>gN', function() move_cursor_to_link('b') end, { desc = 'Goto previous link' })
 
 -- TODO get word count -- {{{
 vim.cmd[[
@@ -552,7 +559,7 @@ local function toggle_spell(eng_dialect)
         vim.o.spell = false
     else
         vim.o.spell = true
-        vim.bo.spelllang = 'en_' .. eng_dialect .. ',cjk'
+        vim.o.spelllang = 'en_' .. eng_dialect .. ',cjk'
     end
 end
 vim.api.nvim_create_user_command('SpellGB', function()
