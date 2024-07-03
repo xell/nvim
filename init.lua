@@ -82,30 +82,6 @@ vim.opt.fillchars = { --- nvim-spec
     vert = '│',
 }
 
--- set lsp diagnostic signs {{{
--- https://www.reddit.com/r/neovim/comments/1d8tq14/setting_up_signs_with_vimdiagnostic/
-vim.diagnostic.config {
-    virtual_text = true,
-    signs = {
-        text = {
-            [vim.diagnostic.severity.ERROR] =    '',
-            [vim.diagnostic.severity.WARN]  =    '',
-            [vim.diagnostic.severity.INFO]  =    '󰋼',
-            [vim.diagnostic.severity.HINT]  = ({ '', '', '󰌵' })[1]
-        },
-    },
-    float = {
-        border = 'rounded',
-        format = function(d)
-            return ('%s (%s) [%s]'):format(d.message, d.source, d.code or d.user_data.lsp.code)
-        end,
-    },
-    underline = true,
-    jump = {
-        float = true,
-    },
-} -- }}}
-
 -- reload current colorscheme
 vim.api.nvim_create_user_command('ReloadColorscheme', function()
     vim.cmd.colorscheme(vim.api.nvim_exec2('colorscheme', { output = true })['output'])
@@ -650,5 +626,7 @@ vim.keymap.set('ca', 'xfn', 'echo expand("%:p")')
 vim.keymap.set('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
 -- }}}
 
-require('config.lazy')
+require 'lsp'
+
+require 'config.lazy'
 
