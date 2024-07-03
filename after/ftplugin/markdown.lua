@@ -5,6 +5,8 @@ vol.conceallevel = 2
 vol.breakindent = true
 vol.linebreak = true
 vol.formatoptions = 'mBlrocq'
+vol.comments:append(':-')
+vol.comments:remove('fb:-')
 
 local vks = vim.keymap.set
 vks('v', '<Leader>b', [[<ESC>`>a**<ESC>`<i**<ESC>`>ll]], { buffer = true })

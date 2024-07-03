@@ -84,7 +84,7 @@ vim.opt.fillchars = { --- nvim-spec
 -- set lsp diagnostic signs {{{
 -- https://www.reddit.com/r/neovim/comments/1d8tq14/setting_up_signs_with_vimdiagnostic/
 vim.diagnostic.config {
-    virtual_text = false,
+    virtual_text = true,
     signs = {
         text = {
             [vim.diagnostic.severity.ERROR] =    '',
@@ -314,7 +314,7 @@ vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 -- toggle fold
 vim.cmd[[nnoremap <silent> <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
 
-vim.keymap.set('n', 'zkk', function()
+vim.keymap.set('n', 'z[', function()
     local current_foldlevel = vim.call('foldlevel', '.')
     local line = vim.fn.line('.')
     while line >= 1 do
@@ -381,6 +381,7 @@ vim.keymap.set('n', '<M-C-l>', function()
         vim.bo.number = false
     end
     vim.wo.linebreak = vim.t.lbr
+    vim.wo.foldmethod = vim.o.foldmethod
     vim.print('Refresh the filetype.')
 end)
 
@@ -476,6 +477,9 @@ vim.api.nvim_create_autocmd({ 'FocusLost' }, {
         -- vim.api.nvim_feedkeys(k([[<c-\><c-n>]]), 'n', false)
     end,
 })
+
+-- curly quote
+vim.keymap.set('i', "<M-'>", '’')
 
 -- }}}
 

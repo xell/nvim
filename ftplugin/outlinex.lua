@@ -93,7 +93,7 @@ local function get_fold_level(bufnr, linenr) -- {{{
     end
 end -- }}}
 
--- return ( starline, lastline ), ( 0, 0 )
+-- return ( startline, lastline ), ( 0, 0 )
 local function get_fold_range(bufnr, linenr) -- {{{
     local fold_startline, fold_level = get_fold_level(bufnr, linenr)
     if fold_level == 0 then return 0, 0 end
@@ -146,6 +146,29 @@ local function is_nested_seditor(bufnr, firstline, lastline) -- {{{
 end -- }}}
 
 -- }}}
+
+-- better o insert new line -- {{{
+vim.keymap.set('n', 'o', function ()
+    local cur_linenr = vim.fn.line('.')
+    local _, lastlinenr = get_fold_range(0, cur_linenr)
+    local insert_linenr = -1
+
+    local foldclosed_linenr = vim.fn.foldclosed(cur_linenr)
+    local foldclosed = (foldclosed_linenr == cur_linenr and lastlinenr > cur_linenr) and true or false
+    insert_linenr = foldclosed and lastlinenr or cur_linenr
+
+    local cur_line = vim.fn.getline(cur_linenr)
+    local line_head_length = string.find(cur_line, '-') + 1
+    local line_head = string.sub(cur_line, 1, line_head_length)
+    if lastlinenr > cur_linenr and (not foldclosed) then
+        -- it's a real open fold, add a sub item instead of an equal one
+        line_head = '  ' .. line_head
+        line_head_length = line_head_length + 2
+    end
+    vim.api.nvim_buf_set_lines(0, insert_linenr, insert_linenr, true, { line_head })
+    vim.fn.cursor(insert_linenr + 1, line_head_length)
+    vim.cmd.startinsert()
+end, { buffer = true, desc = 'Redefine o new line' }) -- }}}
 
 -- DetectWrongIndentation
 -- check wrong indentations to quickfix list -- {{{
@@ -282,6 +305,16 @@ vks('n', '<M-;>', function () -- {{{
     end
 end) -- }}}
 
+-- override bdelete -- {{{
+local outlinex_bd_aug = vim.api.nvim_create_augroup("OverrideBDCommand", { clear = true })
+vim.api.nvim_create_autocmd('BufWinEnter', {
+    group = outlinex_bd_aug,
+    pattern = 'yodeX-*',
+    callback = function()
+        vks('ca', 'bd', "lua require'yode-nvim'.bufferDelete()", { buffer = true })
+    end,
+}) -- }}}
+
 -- https://nuxsh.is-a.dev/blog/custom-nvim-statusline.html
 local tools = require'tools'
 _G.WinbarText =  function() -- {{{
@@ -325,59 +358,50 @@ _G.WinbarText =  function() -- {{{
 end -- }}}
 
 -- yode winbar and breadcrumbs level up function {{{
-local outlinex_aug = vim.api.nvim_create_augroup('outlinex', { clear = true })
+local outlinex_winbar_aug = vim.api.nvim_create_augroup('outlinex', { clear = true })
 vim.api.nvim_create_autocmd(
     { 'BufWinEnter', 'WinEnter', 'BufRead', 'CursorHold' },
     {
-    pattern = 'yodeX-*',
-    group = outlinex_aug,
-    callback = function()
-        if vim.t.winbar_ori ~= nil then return end
+        pattern = 'yodeX-*',
+        group = outlinex_winbar_aug,
+        callback = function()
+            if vim.t.winbar_ori ~= nil then return end
 
-        vim.opt_local.winbar = '%!luaeval("WinbarText()")'
+            vim.opt_local.winbar = '%!luaeval("WinbarText()")'
 
-        if vim.b.seditor_info == nil then return end
-        -- { bufnr, firstline, lastline, seditorBufferId, seditorName }
-        local bi = vim.b.seditor_info
-        local ori_bufnr = bi[1]
-        local cur_line = bi[2]
+            if vim.b.seditor_info == nil then return end
+            -- { bufnr, firstline, lastline, seditorBufferId, seditorName }
+            local bi = vim.b.seditor_info
+            local ori_bufnr = bi[1]
+            local cur_line = bi[2]
 
-        local cur_fold_level = (select(2, get_fold_level(ori_bufnr, cur_line)))
+            local cur_fold_level = (select(2, get_fold_level(ori_bufnr, cur_line)))
 
-        vim.keymap.set('n', ',g0', yode.bufferDelete, { buffer = true, desc = 'Goto original' })
+            vim.keymap.set('n', ',g0', yode.bufferDelete, { buffer = true, desc = 'Goto original' })
 
-        local up_linenr = cur_line - 1
-        local up_fold_level
-        local cmdtext = {}
+            local up_linenr = cur_line - 1
+            local up_fold_level
+            local cmdtext = {}
 
-        while up_linenr >= 1 do
-            up_fold_level = (select(2, get_fold_level(ori_bufnr, up_linenr)))
-            if up_fold_level < cur_fold_level then
-                cmdtext[up_fold_level] = 'nmap <Leader>g' .. up_fold_level ..
-                  ' :lua CreateSeditorByLinenr(' .. ori_bufnr .. ', ' ..
-                  up_linenr .. ')<CR>'
-                cur_fold_level = up_fold_level
+            while up_linenr >= 1 do
+                up_fold_level = (select(2, get_fold_level(ori_bufnr, up_linenr)))
+                if up_fold_level < cur_fold_level then
+                    cmdtext[up_fold_level] = 'nmap <Leader>g' .. up_fold_level ..
+                    ' :lua CreateSeditorByLinenr(' .. ori_bufnr .. ', ' ..
+                    up_linenr .. ')<CR>'
+                    cur_fold_level = up_fold_level
+                end
+                if up_fold_level == 1 then break end
+                up_linenr = up_linenr - 1
             end
-            if up_fold_level == 1 then break end
-            up_linenr = up_linenr - 1
-        end
 
-        local all_cmdtext = ''
-        for _, value in pairs(cmdtext) do
-            all_cmdtext = all_cmdtext .. value .. '\n'
-        end
-        vim.cmd(all_cmdtext)
-    end,
-})
-
--- vim.api.nvim_create_autocmd({ 'BufWinLeave', 'WinLeave', 'WinClosed' }, {
---     pattern = 'yode://*',
---     group = outlinex_aug,
---     callback = function()
---         vim.opt_local.winbar = nil
---     end,
--- })
-
+            local all_cmdtext = ''
+            for _, value in pairs(cmdtext) do
+                all_cmdtext = all_cmdtext .. value .. '\n'
+            end
+            vim.cmd(all_cmdtext)
+        end,
+    })
 
 _G.CreateSeditorByLinenr =  function (bufnr, linenr)
     local firstline, lastline = get_fold_range(bufnr, linenr)
@@ -393,6 +417,17 @@ end
 -- foldmethod foldexpr {{{ ss
 
 vol.foldmethod = 'expr'
+
+-- Temp fix for E490: no fold found with tree-sitter
+vim.api.nvim_create_autocmd('BufWinEnter', {
+    group = vim.api.nvim_create_augroup('OutlinexFoldmethod', { clear = true }),
+    buffer = 0,
+    callback = function(_)
+        vim.wo.foldmethod = 'expr'
+    end,
+    once = true,
+})
+
 
 -- https://www.reddit.com/r/neovim/comments/10q2mjq/i_dont_really_get_folding/
 -- refer to https://github.com/masukomi/vim-markdown-folding/blob/master/after/ftplugin/markdown/folding.vim
@@ -414,13 +449,13 @@ _G.outlinexFold = function ()
     local level = string.find(line, '[^ ]')
     if level >= 1 then
         if string.find(line, '^ *-') then
-          return ('>' .. ((level + 1) / 2))
+            return ('>' .. ((level + 1) / 2))
         else
-          -- this will treat mutliline item as a fold
-          -- return ('' .. ((level - 1) / 2))
-          -- return ('>' .. (((level - 1) / 2)) - 1)
-          -- this will NOT treat mutliline item as a fold FIXME
-          -- return '-1'
+            -- this will treat mutliline item as a fold
+            -- return ('' .. ((level - 1) / 2))
+            -- return ('>' .. (((level - 1) / 2)) - 1)
+            -- this will NOT treat mutliline item as a fold FIXME
+            -- return '-1'
         end
     end
     return '='
