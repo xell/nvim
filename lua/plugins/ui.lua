@@ -53,7 +53,7 @@ return {
                             -- tab.is_current() and '' or '󰆣',
                             tab.is_current() and '' or '',
                             tab.number(),
-                            require'tools'.sub_utf8(tab.name(), 1, 6),
+                            require 'tools'.sub_utf8(tab.name(), 1, 6),
                             -- tab.close_btn(''),
                             tab.close_btn(''),
                             -- line.sep('', hl, theme.fill),

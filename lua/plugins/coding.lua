@@ -430,7 +430,7 @@ return {
                         else
                             gitsigns.nav_hunk('next')
                         end
-                    end)
+                    end, { desc = 'Gitsigns next hunk' })
 
                     map('n', '[c', function()
                         if vim.wo.diff then
@@ -438,9 +438,9 @@ return {
                         else
                             gitsigns.nav_hunk('prev')
                         end
-                    end)
-                    map('n', '<Leader>hd', gitsigns.diffthis)
-                    map('n', '<Leader>hD', function() gitsigns.diffthis('~') end)
+                    end, { desc = 'Gitsigns previous hunk' })
+                    map('n', '<Leader>hd', gitsigns.diffthis, { desc = 'Gitsigns diffthis' })
+                    map('n', '<Leader>hD', function() gitsigns.diffthis('~') end, { desc = 'Gitsigns diffthis ~' })
                 end,
             }
         end
@@ -577,7 +577,7 @@ return {
     -- https://github.com/nvim-treesitter/nvim-treesitter-context
     { 'nvim-treesitter/nvim-treesitter-context',
         config = function ()
-            require'treesitter-context'.setup{
+            require 'treesitter-context'.setup {
                 enable = false, -- Enable this plugin (Can be enabled/disabled later via commands)
                 max_lines = 0, -- How many lines the window should span. Values <= 0 mean no limit.
                 min_window_height = 0, -- Minimum editor window height to enable context. Values <= 0 mean no limit.

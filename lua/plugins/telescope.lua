@@ -108,13 +108,14 @@ return {
         }, },
         -- lazy style key map
         keys = {
-            { '<leader>u', [[:Telescope undo<CR><Esc>]], desc = 'undo history', },
+            { '<leader>u', [[:Telescope undo<CR><Esc>]], desc = 'Telescope undo history', },
         },
         opts = {
             -- don't use `defaults = { }` here, do this in the main telescope spec
             extensions = {
                 undo = {
-                    -- telescope-undo.nvim config, see below
+                    use_delta = true,
+                    side_by_side = true,
                 },
             },
         },
@@ -151,7 +152,7 @@ return {
                     },
                 }
             }
-            require('telescope').load_extension'frecency'
+            require('telescope').load_extension 'frecency'
         end,
     }, -- }}}
 }

@@ -316,7 +316,7 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
 }) -- }}}
 
 -- https://nuxsh.is-a.dev/blog/custom-nvim-statusline.html
-local tools = require'tools'
+local tools = require 'tools'
 _G.WinbarText =  function() -- {{{
     if vim.b.seditor_info == nil then
         return '%-t'

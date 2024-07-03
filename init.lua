@@ -12,7 +12,7 @@
 vim.loader.enable()
 package.path = package.path .. ';' .. vim.fn.expand('$HOME') .. '/.luarocks/share/lua/5.1/?/init.lua;'
 package.path = package.path .. ';' .. vim.fn.expand('$HOME') .. '/.luarocks/share/lua/5.1/?.lua;'
-local tools = require'tools'
+local tools = require 'tools'
 local function k(keys)
     return vim.api.nvim_replace_termcodes(keys, true, true, true)
 end
@@ -42,6 +42,7 @@ if vim.fn.executable('rg') == 1 then
 end
 
 -- Completion
+vim.o.pumheight = 20
 vim.o.wildmenu = true
 vim.o.omnifunc = 'syntaxcomplete#Complete'
 vim.o.dictionary = '/usr/share/dict/words'
@@ -202,6 +203,12 @@ vim.g.seditor_table = {}
 
 vim.opt.diffopt:append('linematch:60')
 
+-- Disable health checks for these providers.
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider = 0
+vim.g.loaded_perl_provider = 0
+vim.g.loaded_node_provider = 0
+
 -- xell Notes -- {{{
 vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob('~/Documents/Notes'))
 local xell_main_note = string.gsub(vim.g.xell_notes_root .. '/Notes/notes.md', '\\', '')
@@ -237,6 +244,26 @@ vim.keymap.set('n', '<Leader>N', function()
 end, { desc = 'Note in new tab' })
 vim.keymap.set('n', '<Leader>ne', ':e ' .. xell_main_note .. '<CR>', { desc = 'Note in current tab' })
 -- }}}
+
+vim.api.nvim_create_autocmd('FileType', {
+    group = vim.api.nvim_create_augroup('xell/close_with_q', { clear = true }),
+    desc = 'Close with <q>',
+    pattern = {
+        'git',
+        'help',
+        'man',
+        'qf',
+        'query',
+        'scratch',
+        'spectre_panel',
+    },
+    callback = function(args)
+        vim.keymap.set('n', 'q', '<cmd>quit<cr>', { buffer = args.buf })
+    end,
+})
+
+
+
 -- }}}
 
 -- Windows and tab {{{
@@ -261,8 +288,8 @@ for c in ('hjkl'):gmatch'.' do
     vim.keymap.set('n', '<M-' .. c .. '>', '<C-w>' .. c)
 end
 
--- <Backspace> to jump between two recent windows
-vim.keymap.set('n', '<Backspace>', function()
+-- <Tab> to jump between two recent windows
+vim.keymap.set('n', '<Tab>', function()
     local ori_win_nr = vim.api.nvim_win_get_number(0)
     vim.cmd.normal(k('<c-w><c-p>'))
     local cur_win_nr = vim.api.nvim_win_get_number(0)
@@ -270,8 +297,8 @@ vim.keymap.set('n', '<Backspace>', function()
         vim.cmd.normal(k('<c-w><c-w>'))
     end
 end, { silent = true })
--- \ to jump clockwise
-vim.keymap.set('n', '\\', '<C-w>W')
+-- <Backspace> to jump clockwise
+vim.keymap.set('n', '<Backspace>', '<C-w>W')
 
 -- split
 vim.keymap.set('n', '<Leader>s', vim.cmd.split, { desc = 'Split U/D' })
@@ -342,6 +369,9 @@ vim.opt.iskeyword:append('-') -- mainly for dictionary lookup
 -- clipboard-osc52
 vim.o.clipboard = 'unnamedplus'
 
+-- Make U opposite to u.
+vim.keymap.set('n', 'U', '<C-r>', { desc = 'Redo' })
+
 -- leave cursor in the end of visual block
 vim.keymap.set('v', 'y', 'ygv<Esc>')
 vim.keymap.set('n', 'P', 'gP')
@@ -386,7 +416,7 @@ vim.keymap.set('n', '<M-C-l>', function()
 end)
 
 -- <M-s> update/write
-vim.keymap.set({ 'n', 'i' }, '<M-s>', function()
+vim.keymap.set({ 's', 'i', 'n', 'v' }, '<M-s>', function()
     print(select(2, pcall(vim.cmd.update)))
 end)
 
@@ -403,7 +433,15 @@ vim.api.nvim_create_user_command('Search2LocList', function ()
     vim.cmd('lvimgrep "' .. vim.fn.getreg('/') .. '" %')
     vim.cmd.lwindow()
 end, {})
+-- Keeping the cursor centered.
+vim.keymap.set('n', '<C-d>', '<C-d>zz', { desc = 'Scroll downwards' })
+vim.keymap.set('n', '<C-u>', '<C-u>zz', { desc = 'Scroll upwards' })
+vim.keymap.set('n', 'n', 'nzzzv', { desc = 'Next result' })
+vim.keymap.set('n', 'N', 'Nzzzv', { desc = 'Previous result' })
 
+-- Indent while remaining in visual mode.
+vim.keymap.set('v', '<', '<gv')
+vim.keymap.set('v', '>', '>gv')
 
 -- highlight/blink yank area
 vim.api.nvim_create_autocmd(
@@ -424,7 +462,7 @@ vim.keymap.set('n', '<Leader>L', function ()
     end
 end, { desc = 'Toggle conceallevel 0/2' })
 
--- while opening file, jump to last known cursor position
+-- while opening file, jump to last known cursor position (last location)
 -- :h lua-guide-autocommands-group
 local vim_startup_aug = vim.api.nvim_create_augroup('vimStartup', { clear = true })
 vim.api.nvim_create_autocmd({ 'BufReadPost' }, {
@@ -511,8 +549,8 @@ local function move_cursor_to_link(backward)
     local link_pattern = vim.b.link_pattern or vim.g.link_pattern
     vim.fn.search(link_pattern, 's' .. backward)
 end
-vim.keymap.set('n', '<Leader>gn', function() move_cursor_to_link('') end, { desc = 'Goto next link' })
-vim.keymap.set('n', '<Leader>gN', function() move_cursor_to_link('b') end, { desc = 'Goto previous link' })
+vim.keymap.set('n', ']n', function() move_cursor_to_link('') end, { desc = 'Goto next link' })
+vim.keymap.set('n', '[n', function() move_cursor_to_link('b') end, { desc = 'Goto previous link' })
 
 -- TODO get word count -- {{{
 vim.cmd[[
@@ -573,6 +611,37 @@ vim.api.nvim_create_user_command('SpellUS', function()
     toggle_spell('us')
 end, {})
 
+-- Toggle the quickfix/loclist window -- {{{
+-- When toggling these, ignore error messages and restore the cursor to the original window when opening the list
+local silent_mods = { mods = { silent = true, emsg_silent = true } }
+vim.keymap.set('n', '<Leader>xq', function()
+    if vim.fn.getqflist({ winid = 0 }).winid ~= 0 then
+        vim.cmd.cclose(silent_mods)
+    elseif #vim.fn.getqflist() > 0 then
+        local win = vim.api.nvim_get_current_win()
+        vim.cmd.copen(silent_mods)
+        if win ~= vim.api.nvim_get_current_win() then
+            vim.cmd.wincmd 'p'
+        end
+    end
+end, { desc = 'Toggle quickfix list' })
+vim.keymap.set('n', '<Leader>xl', function()
+    if vim.fn.getloclist(0, { winid = 0 }).winid ~= 0 then
+        vim.cmd.lclose(silent_mods)
+    elseif #vim.fn.getloclist(0) > 0 then
+        local win = vim.api.nvim_get_current_win()
+        vim.cmd.lopen(silent_mods)
+        if win ~= vim.api.nvim_get_current_win() then
+            vim.cmd.wincmd 'p'
+        end
+    end
+end, { desc = 'Toggle location list' })
+-- and navigating through the items.
+vim.keymap.set('n', '[q', '<cmd>cprev<cr>zvzz', { desc = 'Previous quickfix item' })
+vim.keymap.set('n', ']q', '<cmd>cnext<cr>zvzz', { desc = 'Next quickfix item' })
+vim.keymap.set('n', '[l', '<cmd>lprev<cr>zvzz', { desc = 'Previous loclist item' })
+vim.keymap.set('n', ']l', '<cmd>lnext<cr>zvzz', { desc = 'Next loclist item' })
+-- }}}
 
 -- }}}
 
