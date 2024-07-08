@@ -133,7 +133,7 @@ StatuslineActive = function()
         -- ' %<%f %h%y%m%r ',
         vim.opt.fileformat:get() == 'unix' and '' or '[' .. vim.opt.fileformat:get() .. '] ',
         vim.opt.fileencoding:get() == 'utf-8' and '' or '[' .. vim.opt.fileencoding:get() .. '] ',
-        (function()
+        vim.fn.exists('*FugitiveStatusline') == 0 and '' or (function ()
             local fs = vim.fn['fugitive#statusline']()
             if fs ~= '' then
                 fs = string.sub(fs, 6, -3)
@@ -298,8 +298,12 @@ vim.keymap.set('n', '<M-w>', ':tabclose')
 vim.keymap.set('n', '<M-[>', 'gT')
 vim.keymap.set('n', '<M-]>', 'gt')
 for i = 1, 9, 1 do
-    vim.keymap.set('n', '<Leader>' .. i, i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
+    vim.keymap.set('n', '<C-' .. i .. '>', i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
 end
+-- edit current buf in a new tab
+vim.api.nvim_create_user_command('TabnewEditBuf', function ()
+    vim.cmd[[exec 'tabe +buf\ ' . bufnr()]]
+end, {})
 
 -- window full screen plugin
 vim.keymap.set('n', '<C-Enter>', vim.cmd.WinFullScreen)
@@ -421,13 +425,13 @@ vim.keymap.set('v', '>', '>gv')
 
 -- highlight/blink yank area
 vim.api.nvim_create_autocmd(
-{ 'TextYankPost' },
-{
-    pattern = { '*' },
-    callback = function()
-        vim.highlight.on_yank({ timeout = 1000 })
-    end,
-})
+    { 'TextYankPost' },
+    {
+        pattern = { '*' },
+        callback = function()
+            vim.highlight.on_yank({ timeout = 1000 })
+        end,
+    })
 
 -- toggle conceallevel
 vim.keymap.set('n', '<Leader>L', function ()
@@ -532,31 +536,31 @@ vim.keymap.set('n', '[n', function() move_cursor_to_link('b') end, { desc = 'Got
 vim.cmd[[
 command! -range=% Num :call NumberOfChars()
 function! NumberOfChars() range
-	"count double-byte characters
-	redir => numChs
-	"silent! execute a:firstline.",".a:lastline."s/[^\\x00-\\xff]/&/gn"
-	silent! execute "'<,'>s/[^\\x00-\\xff]/&/gn"
-	redir END
-	if match(numChs,'E486') > 0
-		let numC = 0
-	else
-		let numC = strpart(numChs, 0, stridx(numChs,' '))
-	endif
-
-	"count english words
-	redir => numEng
-	silent! execute "'<,'>s/\\<\\(\\w\\|-\\|'\\)\\+\\>/&/gn"
-	redir END
-	if match(numEng,'E486') > 0
-		let numE = 0
+    "count double-byte characters
+    redir => numChs
+    "silent! execute a:firstline.",".a:lastline."s/[^\\x00-\\xff]/&/gn"
+    silent! execute "'<,'>s/[^\\x00-\\xff]/&/gn"
+    redir END
+    if match(numChs,'E486') > 0
+        let numC = 0
     else
-		let numE = strpart(numEng, 0, stridx(numEng,' '))
-	endif
+        let numC = strpart(numChs, 0, stridx(numChs,' '))
+    endif
 
-	"echo to vim
-	echo ''
-	echo numC . ' 个中文字符'
-	echo numE . ' 个英文词语'
+    "count english words
+    redir => numEng
+    silent! execute "'<,'>s/\\<\\(\\w\\|-\\|'\\)\\+\\>/&/gn"
+    redir END
+    if match(numEng,'E486') > 0
+        let numE = 0
+    else
+        let numE = strpart(numEng, 0, stridx(numEng,' '))
+    endif
+
+    "echo to vim
+    echo ''
+    echo numC . ' 个中文字符'
+    echo numE . ' 个英文词语'
 endfunction
 ]] -- }}}
 

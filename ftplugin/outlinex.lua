@@ -150,21 +150,31 @@ end -- }}}
 -- better o insert new line -- {{{
 vim.keymap.set('n', 'o', function ()
     local cur_linenr = vim.fn.line('.')
-    local _, lastlinenr = get_fold_range(0, cur_linenr)
-    local insert_linenr = -1
-
-    local foldclosed_linenr = vim.fn.foldclosed(cur_linenr)
-    local foldclosed = (foldclosed_linenr == cur_linenr and lastlinenr > cur_linenr) and true or false
-    insert_linenr = foldclosed and lastlinenr or cur_linenr
-
     local cur_line = vim.fn.getline(cur_linenr)
-    local line_head_length = string.find(cur_line, '-') + 1
-    local line_head = string.sub(cur_line, 1, line_head_length)
-    if lastlinenr > cur_linenr and (not foldclosed) then
-        -- it's a real open fold, add a sub item instead of an equal one
-        line_head = '  ' .. line_head
-        line_head_length = line_head_length + 2
+    local insert_linenr = 0
+    local line_head_length = 0
+    local line_head = ''
+
+    if cur_line == '' then
+        insert_linenr = cur_linenr
+        line_head = '- '
+        line_head_length = 2
+    else
+        local _, lastlinenr = get_fold_range(0, cur_linenr)
+
+        local foldclosed_linenr = vim.fn.foldclosed(cur_linenr)
+        local foldclosed = (foldclosed_linenr == cur_linenr and lastlinenr > cur_linenr) and true or false
+        insert_linenr = foldclosed and lastlinenr or cur_linenr
+
+        line_head_length = string.find(cur_line, '-') + 1
+        line_head = string.sub(cur_line, 1, line_head_length)
+        if lastlinenr > cur_linenr and (not foldclosed) then
+            -- it's a real open fold, add a sub item instead of an equal one
+            line_head = '  ' .. line_head
+            line_head_length = line_head_length + 2
+        end
     end
+
     vim.api.nvim_buf_set_lines(0, insert_linenr, insert_linenr, true, { line_head })
     vim.fn.cursor(insert_linenr + 1, line_head_length)
     vim.cmd.startinsert()

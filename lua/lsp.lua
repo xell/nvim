@@ -1,4 +1,4 @@
--- vim:
+-- vim:fdm=marker
 -- Diagnostic signs {{{
 -- https://www.reddit.com/r/neovim/comments/1d8tq14/setting_up_signs_with_vimdiagnostic/
 local diagnostic_icons = {
@@ -168,9 +168,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
         end, { buffer = ev.buf, desc = 'LSP list workspace folder' })
     end,
 })
-
-
-
 -- }}}
 
 -- Float window beautified {{{
