@@ -2,17 +2,21 @@ local vol = vim.opt_local
 -- options {{{
 vol.tabstop = 2
 vol.shiftwidth = 2
-vol.concealcursor = 'nc'
-vol.conceallevel = 2
-vol.breakindent = true
-vol.linebreak = true
-vol.formatoptions = 'mBlrocq'
+
+if not vim.g.vscode then
+    vol.concealcursor = 'nc'
+    vol.conceallevel = 2
+    vol.breakindent = true
+    vol.breakindentopt = 'list:-2'
+    vol.linebreak = true
+    vol.formatoptions = 'mBlrocq'
+    vol.foldcolumn = '0'
+end
+
 vol.comments:append(':-')
 vol.comments:remove('fb:-')
 vol.formatlistpat = '^\\s*\\d\\+\\.\\s\\+\\|^\\s*[-*+]\\s\\+\\|^\\[^\\ze[^\\]]\\+\\]:\\&^.\\{4\\}'
-vol.breakindentopt = 'list:-2'
 vol.iskeyword:append('#')
-vol.foldcolumn = '0'
 -- vol.breakindentopt = 'shift:2'
 -- }}}
 
@@ -23,9 +27,11 @@ vks('v', '<Leader>i', [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>c', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>h', [[<ESC>`>a==}<ESC>`<i{==<ESC>`>ll]], { buffer = true })
--- https://www.reddit.com/r/neovim/comments/voc9qt/passing_an_initial_search_term_to_telescopes_find/
--- Telescope current_buffer_fuzzy_find default_text='##title
-vks('n', '<Leader><Leader>t', [[:Telescope current_buffer_fuzzy_find default_text='##title<CR><Esc>]], { buffer = true, desc = 'Telescope ##title' })
+if not vim.g.vscode then
+    -- https://www.reddit.com/r/neovim/comments/voc9qt/passing_an_initial_search_term_to_telescopes_find/
+    -- Telescope current_buffer_fuzzy_find default_text='##title
+    vks('n', '<Leader><Leader>t', [[:Telescope current_buffer_fuzzy_find default_text='##title<CR><Esc>]], { buffer = true, desc = 'Telescope ##title' })
+end
 vks('n', '<Leader><Leader>p', function ()
     vim.cmd[[w! test.md]]
     -- https://help.obsidian.md/Extending+Obsidian/Obsidian+URI#Shorthand%20formats
@@ -102,10 +108,11 @@ local function get_fold_range(bufnr, linenr) -- {{{
     local line
 
     local fold_lastline = linenr + 1
+    if fold_lastline > buf_lastline then return fold_startline, fold_startline end
     while fold_lastline <= buf_lastline do
         _, down_fold_level = get_fold_level(bufnr, fold_lastline)
         line = vim.api.nvim_buf_get_lines(bufnr, fold_lastline - 1, fold_lastline, true)[1]
-        if down_fold_level == 0 then return fold_startline, fold_lastline - 1 end
+        if down_fold_level == 0 or down_fold_level == buf_lastline then return fold_startline, fold_lastline - 1 end
         if down_fold_level <= fold_level and string.find(line, '^ *-') then
             return fold_startline, fold_lastline - 1
         else
@@ -180,9 +187,9 @@ vim.keymap.set('n', 'o', function ()
     vim.cmd.startinsert()
 end, { buffer = true, desc = 'Redefine o new line' }) -- }}}
 
--- DetectWrongIndentation
+-- CheckWrongIndentation
 -- check wrong indentations to quickfix list -- {{{
-local function detect_wrong_indentation()
+local function check_wrong_indentation()
     local lastline = vim.api.nvim_buf_line_count(0)
     local startline, text
     for i = 1, lastline, 1 do
@@ -208,7 +215,7 @@ local function detect_wrong_indentation()
     vim.cmd.cwindow()
 end
 
-vim.api.nvim_buf_create_user_command(0, 'DetectWrongIndentation', detect_wrong_indentation, {})
+vim.api.nvim_buf_create_user_command(0, 'CheckWrongIndentation', check_wrong_indentation, {})
 -- }}}
 
 -- zoom in, focus
@@ -426,8 +433,6 @@ end
 
 -- foldmethod foldexpr {{{ ss
 
-vol.foldmethod = 'expr'
-
 -- Temp fix for E490: no fold found with tree-sitter
 vim.api.nvim_create_autocmd('BufWinEnter', {
     group = vim.api.nvim_create_augroup('OutlinexFoldmethod', { clear = true }),
@@ -450,7 +455,10 @@ vim.api.nvim_create_autocmd('BufWinEnter', {
 -- function M.get_my_foldlevel() ... end
 -- return M
 -- vim.o.foldexpr = 'v:lua.require("config.folding").get_my_foldlevel()'
-vol.foldexpr = 'v:lua.outlinexFold()'
+if not vim.g.vscode then
+    vol.foldmethod = 'expr'
+    vol.foldexpr = 'v:lua.outlinexFold()'
+end
 
 -- 1 space-> 1 foldlevel, 3->2, 5->3
 -- blank line is 0
@@ -502,7 +510,9 @@ local handler_item = function(virtText, lnum, endLnum, _, _)
 end
 
 local bufnr = vim.api.nvim_get_current_buf()
-require('ufo').setFoldVirtTextHandler(bufnr, handler_item)
+if not vim.g.vscode then
+    require('ufo').setFoldVirtTextHandler(bufnr, handler_item)
+end
 -- }}}
 
 -- }}}

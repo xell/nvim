@@ -15,10 +15,11 @@ syntax spell toplevel
 
 " syn match markdownListMarkerConceal "\%(\t\| \{0,4\}\)\zs[-*+]\ze\%(\s\+\S\)\@=" conceal cchar=●
 
-
-let s:circle_symbol = ['○', '', '', '', '', '󰝦']
-"exec 'syn match Conceal /^\s*\zs-\ze / conceal cchar=' . ($TERM_PROGRAM ==# 'WezTerm' ? s:circle_symbol[1] : s:circle_symbol[1])
-call matchadd('Conceal','^\s*\zs-\ze ', 20, -1, {'conceal': $TERM_PROGRAM ==# 'WezTerm' ? s:circle_symbol[1] : s:circle_symbol[1]})
+if exists('g:vscode')
+    let s:circle_symbol = ['○', '', '', '', '', '󰝦']
+    "exec 'syn match Conceal /^\s*\zs-\ze / conceal cchar=' . ($TERM_PROGRAM ==# 'WezTerm' ? s:circle_symbol[1] : s:circle_symbol[1])
+    call matchadd('Conceal','^\s*\zs-\ze ', 20, -1, {'conceal': $TERM_PROGRAM ==# 'WezTerm' ? s:circle_symbol[1] : s:circle_symbol[1]})
+endif
 
 " hi! link Conceal Normal
 " }}}
@@ -51,10 +52,10 @@ syn match pdcBlockQuote '^\s*- \zs>.*$'
 hi default link pdcTempPPP Type
 hi default link cmHighlight RedrawDebugClear
 hi default link pdcStrike Todo
-"hi default link pdcStrong @markup.strong
-hi default link pdcStrong textBold
-"hi default link pdcEmphasis @markup.italic
-hi default link pdcEmphasis textItalic
+hi default link pdcStrong @markup.strong
+"hi default link pdcStrong textBold
+hi default link pdcEmphasis @markup.italic
+"hi default link pdcEmphasis textItalic
 hi default link pdcCode @string
 hi default link pdcBlockQuote CursorLine
 hi! default link @markup.raw.markdown_inline @string

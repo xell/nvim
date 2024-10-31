@@ -15,3 +15,8 @@ end
 vim.keymap.set('n', '<Tab>', function ()
     focus_preview(vim.fn.bufnr())
 end, { buffer = true })
+
+-- for thesaurus telescope extension
+vim.keymap.set('n', '<M-d>', function ()
+    vim.ui.open('dict://' .. tostring(require('telescope.actions.state').get_selected_entry()[1]))
+end, { buffer = true })

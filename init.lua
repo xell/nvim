@@ -1,4 +1,4 @@
--- vim:fdm=marker:foldlevel=0
+-- vim:fdm=marker
 -- xell neovim nvim config
 --      _/      _/  _/_/_/_/  _/        _/
 --       _/  _/    _/        _/        _/
@@ -20,7 +20,8 @@ end
 
 -- General settings {{{
 vim.g.mapleader = ','
-vim.g.maplocalleader = '\\'
+vim.g.maplocalleader = [[\]]
+-- vim.g.maplocalleader = '\\'
 
 vim.o.ignorecase = true
 vim.o.smartcase = true
@@ -179,6 +180,8 @@ vim.g.seditor_table = {}
 
 vim.opt.diffopt:append('linematch:60')
 
+vim.g.markdown_syntax_conceal = 1
+
 -- Disable health checks for these providers.
 vim.g.loaded_python3_provider = 0
 vim.g.loaded_ruby_provider = 0
@@ -186,7 +189,7 @@ vim.g.loaded_perl_provider = 0
 vim.g.loaded_node_provider = 0
 
 -- xell Notes -- {{{
-vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob('~/Documents/Notes'))
+vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob('~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes'))
 local xell_main_note = string.gsub(vim.g.xell_notes_root .. '/Notes/notes.md', '\\', '')
 vim.keymap.set('n', '<Leader>N', function()
     -- Iterate through all buffers
@@ -237,9 +240,6 @@ vim.api.nvim_create_autocmd('FileType', {
         vim.keymap.set('n', 'q', '<cmd>quit<cr>', { buffer = args.buf })
     end,
 })
-
-
-
 -- }}}
 
 -- Windows and tab {{{
@@ -266,13 +266,22 @@ end
 
 -- <Tab> to jump between two recent windows
 vim.keymap.set('n', '<Tab>', function()
-    local ori_win_nr = vim.api.nvim_win_get_number(0)
-    vim.cmd.normal(k('<c-w><c-p>'))
-    local cur_win_nr = vim.api.nvim_win_get_number(0)
+    local ori_win_nr = vim.fn.winnr() -- vim.api.nvim_win_get_number(0)
+
+    -- Asynchronous execution
+    -- vim.api.nvim_feedkeys(k('<C-w><C-p>'), 'n', true)
+    vim.cmd('wincmd p')
+    local cur_win_nr = vim.fn.winnr()
+
     if ori_win_nr == cur_win_nr then
-        vim.cmd.normal(k('<c-w><c-w>'))
+        vim.api.nvim_feedkeys(k('<C-w><C-w>'), 'n', true)
     end
-end, { silent = true })
+    local win_id = vim.api.nvim_get_current_win()
+    local config = vim.api.nvim_win_get_config(win_id)
+    if config.relative ~= '' and config.focusable == false then
+        vim.api.nvim_feedkeys(k('<C-w><C-w>'), 'n', true)
+    end
+end)
 -- <Backspace> to jump clockwise
 vim.keymap.set('n', '<Backspace>', '<C-w>W')
 
@@ -308,6 +317,9 @@ end, {})
 -- window full screen plugin
 vim.keymap.set('n', '<C-Enter>', vim.cmd.WinFullScreen)
 
+-- previous and next buffer
+vim.keymap.set('n', 'H', '<CMD>bprevious<CR>')
+vim.keymap.set('n', 'L', '<CMD>bnext<CR>')
 --- }}}
 
 -- Fold {{{
@@ -383,16 +395,16 @@ vim.keymap.set('n', '<M-e>', '<cmd>e %<CR>')
 vim.keymap.set('n', '<M-C-l>', function()
     vim.t.lbr = vim.wo.linebreak
     vim.bo.filetype = vim.o.filetype
-    if vim.call('foldlevel', '.') > 0 then
-        vim.cmd.normal [[zv]]
-    end
     -- WriteRoom
     if vim.t.showtabline_ori ~= nil then
-        vim.bo.number = false
+        vim.wo.number = false
     end
     vim.wo.linebreak = vim.t.lbr
     vim.wo.foldmethod = vim.o.foldmethod
     vim.print('Refresh the filetype.')
+    if vim.call('foldlevel', '.') > 0 then
+        vim.cmd.normal [[zv]]
+    end
 end)
 
 -- <M-s> update/write
@@ -405,6 +417,8 @@ vim.keymap.set('', '<C-k>', '<C-b>')
 vim.keymap.set('', '<C-j>', '<C-f>')
 
 -- search
+vim.keymap.set('n', '*', '*``') -- or :keepjumps
+vim.keymap.set('n', '#', '#``')
 vim.keymap.set('n', '<Leader>ns', function() vim.fn.setreg('/', '') end, { desc = 'Clear search' })
 vim.keymap.set('n', '<Leader>nh', function() vim.o.hlsearch = false end, { desc = 'Hide search' })
 vim.keymap.set('n', '<Leader>h', function() vim.o.hlsearch = not vim.o.hlsearch end, { desc = 'Hide/show search' })
@@ -432,6 +446,9 @@ vim.api.nvim_create_autocmd(
             vim.highlight.on_yank({ timeout = 1000 })
         end,
     })
+
+-- yank
+vim.keymap.set('n', 'Y', '^yg_')
 
 -- toggle conceallevel
 vim.keymap.set('n', '<Leader>L', function ()
@@ -568,7 +585,7 @@ endfunction
 vim.api.nvim_create_user_command('Diffthis', function()
     vim.cmd.diffthis()
     vim.wo.wrap = true
-    vim.cmd.normal(k('<C-w>w'))
+    vim.api.nvim_feedkeys(k('<C-w>w'), 'n', true)
     vim.wo.wrap = true
     vim.cmd.diffthis()
 end, {})
@@ -577,11 +594,11 @@ end, {})
 -- https://stackoverflow.com/questions/18196399/exclude-capitalized-words-from-vim-spell-check
 -- vim.cmd[[syn match myCapitalWords +\<\w*[A-Z]\K*\>\|'s+ contains=@NoSpell]]
 local function toggle_spell(eng_dialect)
-    if vim.o.spell then
-        vim.o.spell = false
+    if vim.opt.spell:get() then
+        vim.opt_local.spell = false or nil
     else
-        vim.o.spell = true
-        vim.o.spelllang = 'en_' .. eng_dialect .. ',cjk'
+        vim.opt_local.spell = true
+        vim.opt_local.spelllang = 'en_' .. eng_dialect .. ',cjk'
     end
 end
 vim.api.nvim_create_user_command('SpellGB', function()
@@ -623,10 +640,16 @@ vim.keymap.set('n', '[l', '<cmd>lprev<cr>zvzz', { desc = 'Previous loclist item'
 vim.keymap.set('n', ']l', '<cmd>lnext<cr>zvzz', { desc = 'Next loclist item' })
 -- }}}
 
+-- Inspect
+vim.keymap.set('n', '<M-i>', '<CMD>Inspect<CR>')
 -- }}}
 
 -- Abbreviations {{{
 vim.keymap.set('ca', 'xfn', 'echo expand("%:p")')
+vim.keymap.set('ca', 'ss', function ()
+    vim.cmd [[bel 10new]]
+    vim.wo.scrolloff = 0
+end)
 vim.keymap.set('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
 -- }}}
 

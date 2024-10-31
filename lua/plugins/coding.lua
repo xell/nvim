@@ -2,13 +2,64 @@
 return {
     -- https://github.com/neovim/nvim-lspconfig
     { 'neovim/nvim-lspconfig', -- {{{
+        cond = not vim.g.vscode,
         config = function()
             -- local lspconfig = require('lspconfig')
 
             -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md
 
+            -- ltex
+            require 'lspconfig'.ltex.setup {
+                filetypes = { 'bib', 'markdown', 'org', 'plaintex', 'rst', 'rnoweb', 'tex' },
+                ---@diagnostic disable-next-line: unused-local
+                on_attach = function(client, bufnr)
+                    print('Loading ltex ...')
+                    require('ltex_extra').reload()
+                    vim.wo.signcolumn = 'yes'
+                end,
+                autostart = false,
+                settings = {
+                    ltex = {
+                        checkFrequency = ({ 'edit', 'save', })[1],
+                        sentenceCacheSize = 6000,
+                        -- https://valentjn.github.io/ltex/settings.html#language
+                        language = 'en-US', -- 'en-GB' 'en-US' 'zh-CN'
+                        disabledRules = {
+                            ['en-US'] = { 'PROFANITY' }, -- Don't censor my speech :-)
+                        },
+                        additionalRules = {
+                            enablePickyRules = true,
+                            motherTongue = 'zh-CN',
+                            -- https://medium.com/@Erik_Krieg/free-and-open-source-grammar-correction-in-neovim-using-ltex-and-n-grams-dea9d10bc964
+                            -- test: This is there last chance to escape.
+                            languageModel = vim.fn.expand('~') .. '/Resources/Libs/lsp-language-model/ngrams/',
+                        },
+                        -- https://seniormars.com/posts/neovim-workflow/
+                        diagnosticSeverity = {
+                            EN_A_VS_AN = 'error',
+                            MORFOLOGIK_RULE_EN_US = 'error',
+                            EN_CONTRACTION_SPELLING = 'error',
+                            CONFUSED_WORDS = 'warning',
+                            DATE_WEEKDAY = 'warning',
+                            UPPERCASE_SENTENCE_START = 'warning',
+                            AI_EN_LECTOR_MISSING_PUNCTUATION_COMMA = 'hint',
+                            APOS_AR = 'hint',
+                            DOUBLE_HYPHEN = 'hint',
+                            EN_SPECIFIC_CASE = 'hint',
+                            IN_A_X_MANNER = 'hint',
+                            PASSIVE_VOICE = 'hint',
+                            SENT_START_CONJUNCTIVE_LINKING_ADVERB_COMMA = 'hint',
+                            default = 'information',
+                        },
+                        -- https://valentjn.github.io/ltex/settings.html#ltexdictionary
+                        -- configurationTarget
+                    },
+                },
+
+            }
+
             -- javascript typescript
-            require 'lspconfig'.tsserver.setup {
+            require 'lspconfig'.ts_ls.setup {
                 init_options = {
                     -- plugins = {
                     --     {
@@ -92,6 +143,7 @@ return {
     }, -- }}}
     -- https://github.com/adoyle-h/lsp-toggle.nvim
     { 'adoyle-h/lsp-toggle.nvim', -- {{{
+        cond = not vim.g.vscode,
         dependencies = {
             'neovim/nvim-lspconfig',
         },
@@ -102,10 +154,46 @@ return {
             }
         end,
     }, -- }}}
+    -- https://github.com/aznhe21/actions-preview.nvim
+    { 'aznhe21/actions-preview.nvim',
+        cond = not vim.g.vscode,
+        config = function()
+            require('actions-preview').setup {
+                diff = {
+                    algorithm = 'patience',
+                    ignore_whitespace = false,
+                },
+                -- telescope = require('telescope.themes').get_dropdown(), -- { winblend = 10 },
+                telescope = {
+                    layout_strategy = 'flex',
+                    layout_config = {
+                        flex = { flip_columns = 110, },
+                        preview_cutoff = 10,
+                    },
+                },
+                backend = { 'telescope', 'nui' },
+                highlight_command = {
+                    require('actions-preview.highlight').delta('delta --no-gitconfig --side-by-side --wrap-max-lines unlimited')
+                },
+            }
+            vim.keymap.set({ 'v', 'n' }, '<Leader><Leader>C', require('actions-preview').code_actions, { desc = 'LSP code action preview' })
+        end,
+    },
+    -- https://github.com/ray-x/lsp_signature.nvim
+    { 'ray-x/lsp_signature.nvim', -- {{{
+        -- for keys, see ../lsp.lua
+        cond = not vim.g.vscode,
+        event = 'VeryLazy',
+        opts = {},
+        config = function(_, opts)
+            require 'lsp_signature'.setup(opts)
+        end,
+    }, -- }}}
 
     -- https://github.com/rachartier/tiny-inline-diagnostic.nvim
     { 'rachartier/tiny-inline-diagnostic.nvim', -- {{{
-        -- event = 'VeryLazy',
+        cond = not vim.g.vscode,
+        event = 'VeryLazy',
         config = function()
             -- vim.opt.updatetime = 100
             require('tiny-inline-diagnostic').setup({
@@ -114,6 +202,7 @@ return {
                     right = ({'', ''})[1],
                     diag = '●',
                     arrow = '    ',
+                    up_arrow = '    ',
                     vertical = ' │',
                     vertical_end = ' └'
                 },
@@ -123,35 +212,66 @@ return {
                     info = 'DiagnosticInfo',
                     hint = 'DiagnosticHint',
                     arrow = 'NonText',
-                    background = 'None', -- Should be 'None' or a hexadecimal color (#RRGGBB)
+                    background = 'CursorLine', -- Can be a highlight or a hexadecimal color (#RRGGBB)
+                    mixing_color = 'None',  -- Can be None or a hexadecimal color (#RRGGBB). Used to blend the background color with the diagnostic background color with another color.
                 },
                 blend = {
                     factor = 0.27,
                 },
                 options = {
-                    clear_on_insert = false,
-                    --- When overflow='wrap', when the message is too long, it is then displayed on multiple lines.
-                    overflow = 'wrap',
+                    -- Throttle the update of the diagnostic when moving cursor, in milliseconds.
+                    -- You can increase it if you have performance issues.
+                    -- Or set it to 0 to have better visuals.
+                    throttle = 20,
+
+                    -- The minimum length of the message, otherwise it will be on a new line.
+                    softwrap = 15,
+
+                    -- If multiple diagnostics are under the cursor, display all of them.
+                    multiple_diag_under_cursor = true,
+
+                    overflow = {
+                        -- Manage the overflow of the message.
+                        --    - wrap: when the message is too long, it is then displayed on multiple lines.
+                        --    - none: the message will not be truncated, and will be displayed on a single line.
+                        mode = "wrap",
+                    },
+
                     --- Enable it if you want to always have message with `after` characters length.
                     break_line = {
                         enabled = false,
                         after = 30,
-                    }
+                    },
+
+                    virt_texts = {
+                        priority = 2048,
+                    },
                 },
             })
             local inline_diagnostic = vim.api.nvim_create_augroup('inlineDiagnostic', { clear = true })
-            vim.api.nvim_create_autocmd('LspAttach', {
+            -- https://github.com/rachartier/tiny-inline-diagnostic.nvim/issues/18
+            vim.api.nvim_create_autocmd({ 'LspAttach', 'ColorScheme' }, {
                 pattern = '*',
                 group = inline_diagnostic,
                 callback = function(_)
-                    require('tiny-inline-diagnostic').change('None', 0.27)
+                    if vim.o.background == 'light' then
+                        require('tiny-inline-diagnostic').change({ factor = 10 }, { mixing_color = 'None' })
+                    else
+                        require('tiny-inline-diagnostic').change({ factor = 0.27 }, { mixing_color = 'None' })
+                    end
                 end,
             })
         end
     }, -- }}}
+    -- https://github.com/j-hui/fidget.nvim
+    { 'j-hui/fidget.nvim', -- {{{
+        cond = not vim.g.vscode,
+        opts = {},
+    }, -- }}}
 
     -- https://github.com/hrsh7th/nvim-cmp
     { 'hrsh7th/nvim-cmp', -- {{{
+        cond = not vim.g.vscode,
         -- event = 'InsertEnter',
         dependencies = { -- {{{
             'neovim/nvim-lspconfig',
@@ -197,14 +317,29 @@ return {
 
             local cmp = require 'cmp'
             cmp.setup({ -- {{{
+                -- completion = {
+                --     -- completeopt = 'menu,menuone,noinsert',
+                --     completeopt = 'menu,noinsert',
+                -- },
+                -- preselect = cmp.PreselectMode.Item,
+                experimental = { ghost_text = true },
                 formatting = {
-                    format = require('lspkind').cmp_format({
-                        -- options: 'text', 'text_symbol', 'symbol_text', 'symbol'
-                        mode = 'symbol',
-                        maxwidth = 50,
-                        ellipsis_char = '...',
-                        show_labelDetails = true,
-                    })
+                    -- https://github.com/brenoprata10/nvim-highlight-colors/
+                    format = function(entry, item)
+                        local color_item = require("nvim-highlight-colors").format(entry, { kind = item.kind })
+                        item = require("lspkind").cmp_format({
+                            -- options: 'text', 'text_symbol', 'symbol_text', 'symbol'
+                            mode = 'symbol',
+                            maxwidth = 50,
+                            ellipsis_char = '...',
+                            show_labelDetails = true,
+                        })(entry, item)
+                        if color_item.abbr_hl_group then
+                            item.kind_hl_group = color_item.abbr_hl_group
+                            item.kind = color_item.abbr
+                        end
+                        return item
+                    end
                 },
                 snippet = {
                     -- REQUIRED - you must specify a snippet engine
@@ -217,8 +352,8 @@ return {
                     -- documentation = cmp.config.window.bordered(),
                 },
                 mapping = cmp.mapping.preset.insert({
-                    ['<C-b>'] = cmp.mapping.scroll_docs(-4),
-                    ['<C-f>'] = cmp.mapping.scroll_docs(4),
+                    ['<C-k>'] = cmp.mapping.scroll_docs(-4),
+                    ['<C-j>'] = cmp.mapping.scroll_docs(4),
                     -- https://www.reddit.com/r/neovim/comments/1axmx9e/trigger_completion_suggestions_manually_with/
                     ['<C-Space>'] = cmp.mapping.complete(),
                     ['<C-e>'] = cmp.mapping.abort(),
@@ -249,6 +384,10 @@ return {
                 sources = cmp.config.sources({
                     { name = 'nvim_lsp' },
                     { name = 'luasnip' }, -- For luasnip users.
+                    {
+                        name = 'dictionary',
+                        keyword_length = 3,
+                    },
                 }, { { name = 'buffer' }, })
             })
 
@@ -309,14 +448,42 @@ return {
             -- }}}
         end,
     }, -- }}}
+    -- https://github.com/uga-rosa/cmp-dictionary
+    { 'uga-rosa/cmp-dictionary', -- {{{
+        cond = not vim.g.vscode,
+        dependencies = {
+            'hrsh7th/nvim-cmp',
+        },
+        config = function ()
+            require('cmp_dictionary').setup({
+                paths = { '/usr/share/dict/words' },
+                exact_length = 3,
+                first_case_insensitive = true,
+                document = {
+                    enable = true,
+                    command = { 'wn', '${label}', '-over' },
+                },
+                -- external = {
+                --     enable = true,
+                --     command = { 'look', '${prefix}', '${path}' },
+                -- },
+            })
+        end,
+    }, -- }}}
 
     -- https://github.com/IsWladi/Gittory
     { 'IsWladi/Gittory', -- {{{
+        cond = not vim.g.vscode,
         -- for MVP version of the plugin
         branch = 'main',
         dependencies = {
-            -- {'rcarriga/nvim-notify'}, -- optional
+            { 'rcarriga/nvim-notify' }, -- optional
         },
+        config = function ()
+            require("notify").setup({
+                background_colour = "#f00000",
+            })
+        end,
         opts = { -- you can omit this, is the default
             atStartUp = true, -- If you want to initialize Gittory when Neovim starts
 
@@ -334,6 +501,7 @@ return {
     }, -- }}}
     -- https://github.com/tpope/vim-fugitive
     { 'tpope/vim-fugitive', -- {{{
+        cond = not vim.g.vscode,
         config = function()
             vim.keymap.set('n', '<Leader>gs', vim.cmd.G, { desc = 'Open git status' })
             vim.keymap.set('n', '<Leader>gd', vim.cmd.Gvdiffsplit, { desc = 'Open git diff vert' })
@@ -341,6 +509,7 @@ return {
     }, -- }}}
     -- https://github.com/lewis6991/gitsigns.nvim
     { 'lewis6991/gitsigns.nvim', -- {{{
+        cond = not vim.g.vscode,
         config = function()
             require('gitsigns').setup {
                 signs                        = {
@@ -419,7 +588,11 @@ return {
         config = function()
             require('nvim-treesitter.configs').setup({
                 modules = {},
-                ensure_installed = { 'c', 'lua', 'vim', 'vimdoc', 'query', 'markdown' },
+                ensure_installed = { 'c', 'lua', 'vim', 'vimdoc', 'query', 'markdown', 'markdown_inline', },
+                markdown = {
+                    enable = true,
+                    -- configuration here or nothing for defaults
+                },
                 -- Install parsers synchronously (only applied to `ensure_installed`)
                 sync_install = false,
                 -- Automatically install missing parsers when entering buffer
@@ -428,10 +601,15 @@ return {
                 ignore_install = {},
                 highlight = {
                     enable = true,
-                    additional_vim_regex_highlighting = { 'markdown', 'markdown_line', 'outlinex' },
+                    -- additional_vim_regex_highlighting = { 'markdown', 'markdown_line', 'outlinex', 'help', },
+                    additional_vim_regex_highlighting = { 'markdown', 'outlinex', 'help', },
                 },
                 indent = {
                     enable = true
+                },
+                matchup = {
+                    enable = true, -- mandatory, false will disable the whole extension
+                    -- disable = { "c", "ruby" }, -- optional, list of language that will be disabled
                 },
             })
             vim.treesitter.language.register('markdown', 'outlinex')
@@ -452,7 +630,7 @@ return {
                         goto_next_start = {
                             [']m'] = '@function.outer',
                             [']]'] = {query = '@class.outer', desc = 'Next class start'},
-                            [']s'] = {
+                            [']p'] = {
                                 query = '@scope',
                                 query_group = 'locals',
                                 desc = 'Next scope'
@@ -508,6 +686,7 @@ return {
     }, -- }}}
     -- https://github.com/stevearc/aerial.nvim
     { 'stevearc/aerial.nvim', -- {{{
+        cond = not vim.g.vscode,
         opts = {},
         -- Optional dependencies
         dependencies = {
@@ -543,6 +722,7 @@ return {
     }, -- }}}
     -- https://github.com/nvim-treesitter/nvim-treesitter-context
     { 'nvim-treesitter/nvim-treesitter-context',
+        cond = not vim.g.vscode,
         config = function ()
             require 'treesitter-context'.setup {
                 enable = false, -- Enable this plugin (Can be enabled/disabled later via commands)

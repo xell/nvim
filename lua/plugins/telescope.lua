@@ -2,14 +2,27 @@
 return {
     -- https://github.com/nvim-telescope/telescope.nvim
     { 'nvim-telescope/telescope.nvim', -- {{{
+        cond = not vim.g.vscode,
         config = function()
             -- call win_getid() or win_gotoid(win_findbuf(bufnr)[0])
             -- https://www.reddit.com/r/neovim/comments/11otu7l/using_telescope_selection_for_custom_function/
             -- https://github.com/nvim-telescope/telescope.nvim/issues/2188
             local actions = require('telescope.actions')
+            local action_state = require 'telescope.actions.state'
+            -- https://github.com/nvim-telescope/telescope.nvim/blob/master/lua/telescope/mappings.lua
             local map_s_cr = {
-                i = { ['<S-CR>'] = actions.select_tab_drop },
-                n = { ['<S-CR>'] = actions.select_tab_drop },
+                i = {
+                    ['<S-CR>'] = actions.select_tab_drop,
+                    ["<C-j>"] = actions.move_selection_next,
+                    ["<C-k>"] = actions.move_selection_previous,
+                },
+                n = {
+                    ['<S-CR>'] = actions.select_tab_drop,
+                    ['<C-Y>'] = function ()
+                        -- vim.fn.setreg('a', action_state.get_selected_entry())
+                        vim.print(action_state.get_selected_entry()[1])
+                    end
+                },
             }
             -- layout https://www.reddit.com/r/neovim/comments/1ar56k0/how_to_see_deeply_nested_file_names_in_telescope/
             require 'telescope'.setup {
@@ -60,7 +73,6 @@ return {
             nnoremap <Leader>fb <cmd>Telescope buffers<CR>
             nnoremap <Leader>fh <cmd>Telescope help_tags<CR>
             nnoremap <Leader>fH <cmd>Telescope heading<CR>
-            nnoremap <Leader>ft <cmd>Telescope tags<CR>
             nnoremap <Leader>fc <cmd>Telescope commands<CR>
             nnoremap <Leader>fC <cmd>Telescope colorscheme<CR>
             nnoremap <Leader>fm <cmd>Telescope marks<CR>
@@ -80,6 +92,7 @@ return {
 
     -- https://github.com/nvim-telescope/telescope-fzf-native.nvim
     { 'nvim-telescope/telescope-fzf-native.nvim', -- {{{
+        cond = not vim.g.vscode,
         build = 'make',
         -- https://www.reddit.com/r/neovim/comments/13cyyhn/search_within_current_buffer/
         config = function()
@@ -102,6 +115,7 @@ return {
 
     -- https://github.com/debugloop/telescope-undo.nvim/
     { 'debugloop/telescope-undo.nvim', -- {{{
+        cond = not vim.g.vscode,
         dependencies = { {
             'nvim-telescope/telescope.nvim',
             dependencies = { 'nvim-lua/plenary.nvim' },
@@ -116,6 +130,9 @@ return {
                 undo = {
                     use_delta = true,
                     side_by_side = true,
+                    vim_diff_opts = {
+                        ctxlen = 1,
+                    },
                 },
             },
         },
@@ -127,6 +144,7 @@ return {
 
     -- https://github.com/crispgm/telescope-heading.nvim
     { 'crispgm/telescope-heading.nvim', -- {{{
+        cond = not vim.g.vscode,
         config = function()
             require('telescope').setup {
                 extensions = {
@@ -141,6 +159,7 @@ return {
 
     -- https://github.com/nvim-telescope/telescope-frecency.nvim
     { 'nvim-telescope/telescope-frecency.nvim', -- {{{
+        cond = not vim.g.vscode,
         -- to prevent colorscheme highlight problem
         keys = {{ '<Leader>ff', '<cmd>Telescope frecency<CR>', desc = 'Telescope frecency' }},
         config = function()
@@ -155,4 +174,52 @@ return {
             require('telescope').load_extension 'frecency'
         end,
     }, -- }}}
+
+    -- https://github.com/rafi/telescope-thesaurus.nvim
+    { 'rafi/telescope-thesaurus.nvim', -- {{{
+        cond = not vim.g.vscode,
+        dependencies = { 'nvim-telescope/telescope.nvim',
+        },
+        config = function()
+            local action_state = require 'telescope.actions.state'
+            require('telescope').setup {
+                extensions = {
+                    thesaurus = {
+                        mappings = {
+                            ['n'] = {
+                                ['<C-y>'] = function ()
+                                    -- vim.fn.setreg('a', action_state.get_selected_entry())
+                                    vim.print(action_state.get_selected_entry()[1])
+                                end,
+                            },
+                        },
+                    },
+                }
+            }
+            require('telescope').load_extension('thesaurus')
+            vim.keymap.set('n', '<Leader>ft', '<CMD>Telescope thesaurus lookup<CR>')
+        end
+    }, -- }}}
+
+    -- https://github.com/LukasPietzschmann/telescope-tabs
+    { 'LukasPietzschmann/telescope-tabs',
+        cond = not vim.g.vscode,
+        config = function()
+            require('telescope').load_extension 'telescope-tabs'
+            require('telescope-tabs').setup {
+                ---@diagnostic disable-next-line: unused-local
+                entry_formatter = function(tab_id, buffer_ids, file_names, file_paths, is_current)
+                    local entry_string = table.concat(file_names, ', ')
+                    return string.format('%d: %s%s', tab_id, entry_string, is_current and ' <' or '')
+                end,
+                ---@diagnostic disable-next-line: unused-local
+                entry_ordinal = function(tab_id, buffer_ids, file_names, file_paths, is_current)
+                    return table.concat(file_names, ' ')
+                end,
+            }
+            vim.keymap.set('n', 'g<Tab>', require('telescope-tabs').go_to_previous)
+            vim.keymap.set('n', '<Leader>t', '<CMD>Telescope telescope-tabs list_tabs<CR>')
+        end,
+        dependencies = { 'nvim-telescope/telescope.nvim' },
+    }
 }

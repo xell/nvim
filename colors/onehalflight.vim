@@ -17,14 +17,14 @@ let g:colors_name="onehalflight"
 let colors_name="onehalflight"
 
 
-let s:black       = { "gui": "#383a42", "cterm": "237" }
+let s:black       = { "gui": ["#383a42", "#16171A"][1], "cterm": "237" }
 let s:red         = { "gui": "#e45649", "cterm": "167" }
 let s:green       = { "gui": "#50a14f", "cterm": "71" }
-let s:yellow      = { "gui": "#c18401", "cterm": "136" }
+let s:yellow      = { "gui": ["#c18401", "#ffa239"][0], "cterm": "136" }
 let s:blue        = { "gui": "#0184bc", "cterm": "31" }
 let s:purple      = { "gui": "#a626a4", "cterm": "127" }
 let s:cyan        = { "gui": "#0997b3", "cterm": "31" }
-let s:white       = { "gui": "#fafafa", "cterm": "231" }
+let s:white       = { "gui": ["#fafafa", "#DCD7D4"][0], "cterm": "231" }
 
 let s:fg          = s:black
 let s:bg          = s:white
@@ -70,13 +70,15 @@ call s:h("CursorLine", "", s:cursor_line, "")
 call s:h("LineNr", s:gutter_fg, s:gutter_bg, "")
 call s:h("CursorLineNr", s:fg, "", "")
 
-call s:h("DiffAdd", s:green, "", "")
-call s:h("DiffChange", s:yellow, "", "")
+" TODO use unique color
+call s:h("DiffAdd", s:green, s:non_text, "")
+call s:h("DiffChange", s:yellow, s:non_text, "")
 call s:h("DiffDelete", s:red, "", "")
-call s:h("DiffText", s:blue, "", "")
+call s:h("DiffText", s:blue, s:non_text, "")
 
 call s:h("IncSearch", s:bg, s:red, "")
-call s:h("Search", s:bg, s:yellow, "")
+call s:h("Search", s:fg, [s:yellow, "#ffa239"][1], "")
+hi Search guibg=#FFEE80
 
 call s:h("ErrorMsg", s:fg, "", "")
 call s:h("ModeMsg", s:fg, "", "")
@@ -84,8 +86,8 @@ call s:h("MoreMsg", s:fg, "", "")
 call s:h("WarningMsg", s:red, "", "")
 call s:h("Question", s:purple, "", "")
 
-call s:h("Pmenu", s:fg, "", "")
-call s:h("PmenuSel", s:bg, s:blue, "")
+call s:h("Pmenu", s:fg, s:cursor_line, "")
+call s:h("PmenuSel", s:red, s:bg, "")
 call s:h("PmenuSbar", "", s:cursor_line, "")
 call s:h("PmenuThumb", "", s:comment_fg, "")
 
@@ -106,7 +108,7 @@ call s:h("VisualNOS", "", s:selection, "")
 call s:h("ColorColumn", "", s:color_col, "")
 call s:h("Conceal", s:gutter_fg, "", "")
 call s:h("Directory", s:blue, "", "")
-call s:h("VertSplit", s:comment_fg, "", "")
+call s:h("WinSeparator", s:non_text, "", "")
 call s:h("Folded", s:fg, "", "")
 call s:h("FoldColumn", s:gutter_fg, "", "")
 call s:h("SignColumn", s:fg, "", "")
@@ -200,10 +202,9 @@ hi link gitcommitSelectedArrow gitcommitSelectedFile
 hi link gitcommitUnmergedArrow gitcommitUnmergedFile
 " }
 
-call s:h("textBold", s:fg, "", "bold")
-call s:h("textItalic", "", "", "italic")
-hi default link WinSeparator LineNr
 hi default link Pmenu WildMenu
+hi default link LspInlayHint TabLine
+hi! default link DiagnosticError WarningMsg
 
 " Fix colors in neovim terminal buffers {
   if has('nvim')

@@ -70,13 +70,20 @@ call s:h("CursorLine", "", s:cursor_line, "")
 call s:h("LineNr", s:selection, "", "")
 call s:h("CursorLineNr", s:fg, "", "")
 
-call s:h("DiffAdd", s:green, "", "")
-call s:h("DiffChange", s:yellow, "", "")
+call s:h("DiffAdd", s:green, s:non_text, "")
+call s:h("DiffChange", s:yellow, s:non_text, "")
 call s:h("DiffDelete", s:red, "", "")
-call s:h("DiffText", s:blue, "", "")
+call s:h("DiffText", s:blue, s:non_text, "")
 
-call s:h("IncSearch", s:bg, s:red, "")
-call s:h("Search", s:bg, s:yellow, "")
+if v:false
+    call s:h("IncSearch", s:bg, s:yellow, "")
+    hi Search guifg=#eab974 guibg=#705838
+    hi CurSearch guifg=#705838#eab974 guibg=#eab974
+else
+    call s:h("IncSearch", s:bg, s:green, "")
+    hi Search guifg=#9fec87 guibg=#32522a
+    hi CurSearch guifg=#32522a guibg=#9fec87
+endif
 
 call s:h("ErrorMsg", s:fg, "", "")
 call s:h("ModeMsg", s:fg, "", "")
@@ -84,8 +91,8 @@ call s:h("MoreMsg", s:fg, "", "")
 call s:h("WarningMsg", s:red, "", "")
 call s:h("Question", s:purple, "", "")
 
-call s:h("Pmenu", s:fg, "", "")
-call s:h("PmenuSel", s:fg, s:blue, "")
+call s:h("Pmenu", s:fg, s:cursor_line, "")
+call s:h("PmenuSel", s:red, s:bg, "")
 call s:h("PmenuSbar", "", s:selection, "")
 call s:h("PmenuThumb", "", s:fg, "")
 
@@ -106,7 +113,7 @@ call s:h("VisualNOS", "", s:selection, "")
 call s:h("ColorColumn", "", s:color_col, "")
 call s:h("Conceal", s:selection, "", "")
 call s:h("Directory", s:blue, "", "")
-call s:h("VertSplit", s:selection, "", "")
+call s:h("WinSeparator", s:non_text, "", "")
 call s:h("Folded", s:fg, "", "")
 call s:h("FoldColumn", s:selection, "", "")
 call s:h("SignColumn", s:fg, "", "")
@@ -200,10 +207,8 @@ hi link gitcommitSelectedArrow gitcommitSelectedFile
 hi link gitcommitUnmergedArrow gitcommitUnmergedFile
 " }
 
-call s:h("textBold", s:fg, "", "bold")
-call s:h("textItalic", s:fg, "", "italic")
-hi default link WinSeparator LineNr
 hi default link Pmenu WildMenu
+hi default link LspInlayHint LineNr
 
 " Fix colors in neovim terminal buffers {
   if has('nvim')

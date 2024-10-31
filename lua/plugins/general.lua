@@ -78,20 +78,22 @@ return {
 
     -- https://github.com/okuuva/auto-save.nvim
     { 'okuuva/auto-save.nvim', -- {{{
+        cond = not vim.g.vscode,
         opts = {
             enabled = true, -- start auto-save when the plugin is loaded (i.e. when your package manager loads it)
-            execution_message = {
-                enabled = true,
-                message = function() -- message to print on save
-                    return ('AutoSave: saved at ' .. vim.fn.strftime('%H:%M:%S'))
-                end,
-                dim = 0.18,                                    -- dim the color of `message`
-                cleaning_interval = 1250,                      -- (milliseconds) automatically clean MsgArea after displaying `message`. See :h MsgArea
-            },
+            -- https://github.com/okuuva/auto-save.nvim/commit/1747cf2#diff-b335630551682c19a781afebcf4d07bf978fb1f8ac04c6bf87428ed5106870f5
+            -- execution_message = {
+            --     enabled = true,
+            --     message = function() -- message to print on save
+            --         return ('AutoSave: saved at ' .. vim.fn.strftime('%H:%M:%S'))
+            --     end,
+            --     dim = 0.18,                                    -- dim the color of `message`
+            --     cleaning_interval = 1250,                      -- (milliseconds) automatically clean MsgArea after displaying `message`. See :h MsgArea
+            -- },
             trigger_events = {                                 -- See :h events
                 immediate_save = { 'BufLeave', 'FocusLost' },  -- vim events that trigger an immediate save
                 defer_save = { 'InsertLeave', 'TextChanged' }, -- vim events that trigger a deferred save (saves after `debounce_delay`)
-                cancel_defered_save = { 'InsertEnter' },       -- vim events that cancel a pending deferred save
+                cancel_deferred_save = { 'InsertEnter' },       -- vim events that cancel a pending deferred save
             },
             condition = nil,
             write_all_buffers = false, -- write all buffers when the current one meets `condition`
@@ -133,15 +135,15 @@ return {
                 deep_pattern = true,
                 -- a list of patterns to open url under cursor
                 extra_patterns = {
-                    {
-                        -- FIXME it's too general
-                        pattern = '([^/ %[]+%.%a%w%w*)',
-                        prefix = 'file://' .. string.gsub(vim.g.xell_notes_root, '\\', '') .. '/Notes/res/',
-                        suffix = '',
-                        file_patterns = '%w+%.md',
-                        excluded_file_patterns = nil,
-                        extra_condition = nil,
-                    },
+                    -- {
+                    --     -- FIXME it's too general
+                    --     pattern = '([^/ %[]+%.%a%w%w*)',
+                    --     prefix = 'file://' .. string.gsub(vim.g.xell_notes_root, '\\', '') .. '/Notes/res/',
+                    --     suffix = '',
+                    --     file_patterns = '%w+%.md',
+                    --     excluded_file_patterns = nil,
+                    --     extra_condition = nil,
+                    -- },
                     -- {
                     -- 	  pattern = '["]([^%s]*)["]:%s*"[^"]*%d[%d%.]*"',
                     -- 	  prefix = 'https://www.npmjs.com/package/',
@@ -176,6 +178,7 @@ return {
     }, -- }}}
     -- https://github.com/kevinhwang91/nvim-ufo
     { 'kevinhwang91/nvim-ufo', -- {{{
+        cond = not vim.g.vscode,
         dependencies = {
             'kevinhwang91/promise-async',
         },
@@ -315,6 +318,7 @@ return {
     }, -- }}}
     -- https://github.com/m4xshen/autoclose.nvim
     { 'm4xshen/autoclose.nvim', -- {{{
+        cond = not vim.g.vscode,
         config = function ()
             require("autoclose").setup({
                 options = {
@@ -357,68 +361,96 @@ return {
 
     -- https://github.com/3rd/image.nvim
     { '3rd/image.nvim', -- {{{
-        cond = vim.fn.has('gui_running') == 0,
+        cond = vim.fn.has('gui_running') == 0 or not vim.g.vscode,
         event = 'VeryLazy',
         dependencies = {
             'nvim-treesitter/nvim-treesitter',
         },
-        opts = {
-            -- backend = 'ueberzug',
-            backend = 'kitty',
-            integrations = {
-                markdown = {
-                    enabled = true,
-                    clear_in_insert_mode = false,
-                    download_remote_images = true,
-                    only_render_image_at_cursor = true,
-                    filetypes = { 'markdown', 'vimwiki', 'outlinex' }, -- markdown extensions (ie. quarto) can go here
+        config = function ()
+            require 'image'.setup({
+                backend = ({ 'kitty', 'ueberzug', })[1],
+                integrations = {
+                    syslang = {
+                        enabled = false,
+                    },
+                    markdown = {
+                        enabled = false,
+                        clear_in_insert_mode = false,
+                        download_remote_images = true,
+                        only_render_image_at_cursor = false,
+                        filetypes = { 'markdown', 'vimwiki', 'outlinex' }, -- markdown extensions (ie. quarto) can go here
+                    },
+                    neorg = {
+                        enabled = false,
+                        clear_in_insert_mode = false,
+                        download_remote_images = true,
+                        only_render_image_at_cursor = false,
+                        filetypes = { 'norg' },
+                    },
+                    html = {
+                        enabled = false,
+                    },
+                    css = {
+                        enabled = false,
+                    },
                 },
-                neorg = {
-                    enabled = true,
-                    clear_in_insert_mode = false,
-                    download_remote_images = true,
-                    only_render_image_at_cursor = false,
-                    filetypes = { 'norg' },
-                },
-                html = {
-                    enabled = true,
-                },
-                css = {
-                    enabled = true,
-                },
-            },
-            max_width = nil,
-            max_height = nil,
-            max_width_window_percentage = nil,
-            max_height_window_percentage = 50,
-            kitty_method = 'normal',
-            -- kitty_method = 'unicode-placeholders',
-            window_overlap_clear_enabled = true,                                     -- toggles images when windows are overlapped
-            window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', 'scrollview', 'scrollview_sign' },
-            editor_only_render_when_focused = false,                                  -- auto show/hide images when the editor gains/looses focus
-            tmux_show_only_in_active_window = false,                                  -- auto show/hide images in the correct Tmux window (needs visual-activity off)
-            hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp' }, -- render image files as images when opened
-        },
+                max_width = nil,
+                max_height = nil,
+                max_width_window_percentage = nil,
+                max_height_window_percentage = 100, -- 50
+                kitty_method = 'normal',
+                -- kitty_method = 'unicode-placeholders',
+                window_overlap_clear_enabled = false,                                     -- toggles images when windows are overlapped
+                window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', 'scrollview', 'scrollview_sign' },
+                editor_only_render_when_focused = false,                                  -- auto show/hide images when the editor gains/looses focus
+                tmux_show_only_in_active_window = false,                                  -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+                hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp' }, -- render image files as images when opened
+            })
+            vim.api.nvim_del_augroup_by_name('image.nvim')
+        end,
     },                                                                                -- }}}
 
     -- https://github.com/folke/which-key.nvim
     { 'folke/which-key.nvim', -- {{{
+        cond = not vim.g.vscode,
         event = 'VeryLazy',
-        init = function()
-            vim.o.timeout = true
-            vim.o.timeoutlen = 500 -- 1000
-        end,
+        -- init = function()
+        --     vim.o.timeout = true
+        --     vim.o.timeoutlen = 500 -- 1000
+        -- end,
         opts = {
-            triggers_blacklist = {
-                -- list of mode / prefixes that should never be hooked by WhichKey
-                -- this is mostly relevant for keymaps that start with a native binding
-                -- i = { '\\' },
+            delay = function(ctx)
+                return ctx.plugin and 0 or 500 -- 200
+            end,
+            --- Mappings are sorted using configured sorters and natural sort of the keys
+            --- Available sorters:
+            --- * local: buffer-local mappings first
+            --- * order: order of the items (Used by plugins like marks / registers)
+            --- * group: groups last
+            --- * alphanum: alpha-numerical first
+            --- * mod: special modifier keys last
+            --- * manual: the order the mappings were added
+            --- * case: lower-case first
+            -- sort = { 'local', 'order', 'group', 'alphanum', 'mod' },
+            sort = { 'alphanum', },
+            layout = {
+                width = { min = 20 },
             },
-        }
+        },
+        keys = {
+            {
+                '<Leader>?',
+                function()
+                    require('which-key').show({ global = false })
+                end,
+                desc = 'Buffer Local Keymaps (which-key)',
+            },
+        },
     }, -- }}}
 
     -- https://github.com/mikavilpas/yazi.nvim
     { 'mikavilpas/yazi.nvim', -- {{{
+        cond = not vim.g.vscode,
         event = 'VeryLazy',
         dependencies = {
             'nvim-lua/plenary.nvim',
@@ -446,5 +478,20 @@ return {
     }, -- }}}
 
     -- https://github.com/ctechols/vim-HideShow
-    { 'ctechols/vim-HideShow', },
+    { 'ctechols/vim-HideShow', -- {{{
+        cond = not vim.g.vscode,
+    }, -- }}}
+
+    -- https://github.com/AndrewRadev/linediff.vim
+    { 'AndrewRadev/linediff.vim', -- {{{
+        cond = not vim.g.vscode,
+    }, -- }}}
+    -- https://github.com/rickhowe/diffchar.vim
+    { 'rickhowe/diffchar.vim', -- {{{
+        cond = not vim.g.vscode,
+        init = function ()
+            vim.g.DiffColors = 0
+            vim.g.DiffPairVisible = 3
+        end
+    }, -- }}}
 }

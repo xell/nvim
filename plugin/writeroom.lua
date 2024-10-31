@@ -4,8 +4,14 @@
 -- lbr?
 
 vim.g.writeroom_win_width = 85
+-- TODO
+local function k(keys)
+    return vim.api.nvim_replace_termcodes(keys, true, true, true)
+end
 
 function Start_writeroom() -- {{{
+    -- TODO
+    vim.t.writeroom = 1
     -- Get the current tabpage
     local tabpage = vim.api.nvim_get_current_tabpage()
     -- List all windows in the current tabpage
@@ -41,15 +47,15 @@ function Start_writeroom() -- {{{
         local sidewin_width = math.floor((width_ori - vim.g.writeroom_win_width) / 2)
         vim.cmd.vsplit()
         vim.cmd.vsplit()
-        vim.cmd.normal[[1\<C-w>]]
+        vim.cmd.normal(k('1<c-w><c-w>'))
         vim.api.nvim_win_set_width(0, sidewin_width)
         vim.cmd.enew()
         vim.opt_local.number = false
-        vim.cmd.normal[[3\<C-w>]]
+        vim.cmd.normal(k('3<c-w><c-w>'))
         vim.api.nvim_win_set_width(0, sidewin_width)
         vim.cmd.enew()
         vim.opt_local.number = false
-        vim.cmd.normal[[2\<C-w>]]
+        vim.cmd.normal(k('2<c-w><c-w>'))
         vim.opt_local.number = false
     end
     vim.cmd[[hi link WinSeparator Normal]]
@@ -127,9 +133,9 @@ function Exit_writeroom() -- {{{
     local wins = vim.api.nvim_tabpage_list_wins(tabpage)
     local count = #wins
     if count > 1 then
-        vim.cmd.normal[[1\<C-w>]]
+        vim.cmd.normal(k('1<c-w><c-w>'))
         vim.cmd.wincmd('c')
-        vim.cmd.normal[[3\<C-w>]]
+        vim.cmd.normal(k('3<c-w><c-w>'))
         vim.cmd.wincmd('c')
     end
     vim.opt_local.number = true
@@ -175,13 +181,13 @@ local function centering_single_window()
     local sidewin_width = math.floor((width_ori - vim.g.writeroom_win_width) / 2)
     vim.cmd.vsplit()
     vim.cmd.vsplit()
-    vim.cmd.normal[[1\<C-w>]]
+    vim.cmd.normal(k('1<c-w><c-w>'))
     vim.api.nvim_win_set_width(0, sidewin_width)
     vim.cmd.enew()
-    vim.cmd.normal[[3\<C-w>]]
+    vim.cmd.normal(k('3<c-w><c-w>'))
     vim.api.nvim_win_set_width(0, sidewin_width)
     vim.cmd.enew()
-    vim.cmd.normal[[2\<C-w>]]
+    vim.cmd.normal(k('2<c-w><c-w>'))
 end
 vim.api.nvim_create_user_command('CenteringSingleWindow', centering_single_window, {})
 

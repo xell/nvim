@@ -9,8 +9,8 @@ local diagnostic_icons = {
 }
 
 vim.diagnostic.config {
-    -- virtual_text = true,
-    virtual_text = {
+    -- update_in_insert = true,
+    virtual_text = ({ {
         -- source = true,  -- Or "if_many"
         prefix = '',
         spacing = 2,
@@ -19,7 +19,7 @@ vim.diagnostic.config {
             local message = vim.split(diagnostic.message, '\n')[1]
             return string.format('%s %s ', icon, message)
         end,
-    },
+    }, false, })[2],
     signs = {
         text = {
             [vim.diagnostic.severity.ERROR] = diagnostic_icons.ERROR,
@@ -67,8 +67,14 @@ vim.diagnostic.handlers.virtual_text = {
 
 -- Global mappings {{{
 vim.keymap.set('n', '<Leader><Leader>e', vim.diagnostic.open_float, { desc = 'Diagnostic info' })
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'LSP goto previous' })
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'LSP goto next' })
+-- vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'LSP goto previous' })
+-- vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'LSP goto next' })
+vim.keymap.set('n', '[d', function ()
+    vim.diagnostic.goto_prev({ float = false })
+end, { desc = 'LSP goto previous' })
+vim.keymap.set('n', ']d', function ()
+    vim.diagnostic.goto_next({ float = false })
+end, { desc = 'LSP goto next' })
 vim.keymap.set('n', '<Leader><Leader>q', vim.diagnostic.setloclist, { desc = 'Diagnostic loclist' })
 -- }}}
 
@@ -79,7 +85,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
     group = vim.api.nvim_create_augroup('UserLspConfig', { clear = true }),
     callback = function(ev)
         -- lsp-defaults-disable
-        vim.keymap.del('n', 'K', { buffer = ev.buf })
+        -- vim.keymap.del('n', 'K', { buffer = ev.buf })
         -- Enable completion triggered by <c-x><c-o>
         vim.bo[ev.buf].omnifunc = 'v:lua.vim.lsp.omnifunc'
 
@@ -88,6 +94,52 @@ vim.api.nvim_create_autocmd('LspAttach', {
         vim.keymap.set('n', '<Leader><Leader>k', vim.lsp.buf.signature_help, { buffer = ev.buf, desc = 'LSP signature_help' })
         vim.keymap.set('n', '<Leader><Leader>o', vim.lsp.buf.document_highlight, { buffer = ev.buf, desc = 'LSP highlight' }) -- TODO autocommand
         vim.keymap.set('n', '<Leader><Leader>O', vim.lsp.buf.clear_references, { buffer = ev.buf, desc = 'LSP highlight' })
+
+        -- Diagnostic toggle update in insert
+        vim.keymap.set('n', '<Leader><Leader>E', function ()
+            vim.diagnostic.config{ update_in_insert = not vim.diagnostic.config().update_in_insert }
+            vim.print('Now the update_in_insert is ' .. tostring(vim.diagnostic.config().update_in_insert) .. '.')
+        end, { desc = 'Diagnostic toggle update in insert' })
+
+        -- Diagnostic toggle hide or show
+        vim.keymap.set('n', '<Leader><Leader>H', function ()
+            -- first time, setup b:diagnostic_show and hide
+            if vim.b.diagnostic_show == nil then
+                vim.diagnostic.hide(nil, 0)
+                vim.b.diagnostic_show = false
+                vim.print('Hide the diagnostic info.')
+            elseif vim.b.diagnostic_show == true then
+                vim.diagnostic.hide(nil, 0)
+                vim.b.diagnostic_show = false
+                vim.print('Hide the diagnostic info.')
+            elseif vim.b.diagnostic_show == false then
+                vim.diagnostic.show(nil, 0)
+                vim.b.diagnostic_show = true
+                vim.print('Show the diagnostic info.')
+            end
+        end, { desc = 'Diagnostic toggle hide or show' })
+
+        require('lsp_signature').on_attach({
+            hint_enable = false, -- virtual hint enable
+            hint_prefix = ({ '🐼 ', '!', })[1],  -- Panda for parameter, NOTE: for the terminal not support emoji, might crash
+            -- or, provide a table with 3 icons
+            -- hint_prefix = {
+            --     above = "↙ ",  -- when the hint is on the line above the current line
+            --     current = "← ",  -- when the hint is on the same line
+            --     below = "↖ "  -- when the hint is on the line below the current line
+            -- }
+            hint_inline = function() return 'right_align' end,  -- should the hint be inline(nvim 0.10 only)?  default false
+            -- return true | 'inline' to show hint inline, return 'eol' to show hint at end of line, return false to disable
+            -- return 'right_align' to display hint right aligned in the current line
+            hi_parameter = "LspSignatureActiveParameter", -- how your parameter will be highlight
+            auto_close_after = nil, -- autoclose signature float win after x sec, disabled if nil
+            transparency = nil, -- disabled by default, allow floating win transparent value 1~100
+            toggle_key = '<M-x>', -- toggle signature on and off in insert mode,  e.g. toggle_key = '<M-x>'
+            select_signature_key = '<M-n>', -- cycle to next signature, e.g. '<M-n>' function overloading
+            move_cursor_key = '<M-p>', -- imap, use nvim_set_current_win to move cursor between current win and floating window
+            -- e.g. move_cursor_key = '<M-p>',
+            -- once moved to floating window, you can use <M-d>, <M-u> to move cursor up and down
+        }, ev.buf)
 
         -- inlay hint {{{
         -- https://github.com/neovim/neovim/issues/28261#issuecomment-2130338921
@@ -157,7 +209,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
 
         -- action
         vim.keymap.set('n', '<Leader><Leader>n', vim.lsp.buf.rename, { buffer = ev.buf, desc = 'LSP rename' })
-        vim.keymap.set({ 'n', 'v' }, '<Leader><Leader>ca', vim.lsp.buf.code_action, { buffer = ev.buf, desc = 'LSP code action' })
+        vim.keymap.set({ 'n', 'v' }, '<Leader><Leader>c', vim.lsp.buf.code_action, { buffer = ev.buf, desc = 'LSP code action' })
         vim.keymap.set('n', '<Leader><Leader>f', function() vim.lsp.buf.format { async = true } end, { buffer = ev.buf, desc = 'LSP buf format' })
 
         -- workspace
@@ -260,3 +312,7 @@ vim.lsp.handlers[methods.textDocument_hover] = enhanced_float_handler(vim.lsp.ha
 vim.lsp.handlers[methods.textDocument_signatureHelp] = enhanced_float_handler(vim.lsp.handlers.signature_help, false)
 -- }}}
 
+vim.cmd[[
+"autocmd CursorHold,CursorHoldI * lua vim.diagnostic.open_float(nil, { focus = false })
+"autocmd CursorHold,CursorHoldI * lua vim.lsp.buf.hover()
+]]
