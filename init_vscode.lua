@@ -27,16 +27,26 @@ vim.o.modelineexpr = true
 vim.o.breakindent = true
 vim.o.breakindentopt = 'list:-2'
 
+
+-- turn off output message
+-- https://stackoverflow.com/questions/78611905/turn-off-neovim-messages-in-vscode
+vim.o.cmdheight = 4
+
 -- }}}
 
 -- Special settings {{{
 
-vim.g.seditor_table = {}
+-- I don't use yode in vscode
+-- vim.g.seditor_table = {}
 
--- xell Notes -- {{{
+vim.g.fast_cursor_move_acceleration = false
+vim.g.EasyMotion_verbose = 0
+
+-- xell Notes FIXME -- {{{
 vim.g.xell_notes_root = vim.fn.fnameescape(vim.fn.glob('~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes'))
 local xell_main_note = string.gsub(vim.g.xell_notes_root .. '/Notes/notes.md', '\\', '')
-vim.keymap.set('n', '<Leader>ne', ':e ' .. xell_main_note .. '<CR>', { desc = 'Note in current tab' })
+vim.keymap.set('n', '<Leader>ne', ':Edit ' .. xell_main_note .. '<CR>', { desc = 'Note in current tab' })
+vim.keymap.set('n', '<Leader>N', 'Edit ' .. xell_main_note .. '<CR>', { desc = 'Note in current tab' })
 -- }}}
 
 -- https://github.com/vscode-neovim/vscode-neovim/issues/169
@@ -107,16 +117,24 @@ vim.keymap.set('n', 'z5', function () c('editor.foldLevel5') end)
 vim.keymap.set('n', 'z6', function () c('editor.foldLevel6') end)
 vim.keymap.set('n', 'z7', function () c('editor.foldLevel7') end)
 
+-- Dealing with j k gj gk
 require('hackKeymap')
+
+-- Remove any visual-mode mapping for j and k
+vim.api.nvim_del_keymap('v', 'j')
+vim.api.nvim_del_keymap('v', 'k')
 
 -- }}}
 
 -- Editing {{{
 vim.o.clipboard = 'unnamedplus'
+vim.g.clipboard = vim.g.vscode_clipboard
 
 -- spell
-vim.keymap.set('n', '[s', function () c('cSpell.goToPreviousSpellingIssueAndSuggest') end)
-vim.keymap.set('n', ']s', function () c('cSpell.goToNextSpellingIssueAndSuggest') end)
+-- vim.keymap.set('n', '[s', function () c('cSpell.goToPreviousSpellingIssueAndSuggest') end)
+-- vim.keymap.set('n', ']s', function () c('cSpell.goToNextSpellingIssueAndSuggest') end)
+vim.keymap.set('n', '[s', function () c('editor.action.marker.prev') end)
+vim.keymap.set('n', ']s', function () c('editor.action.marker.next') end)
 
 -- Make U opposite to u.
 vim.keymap.set('n', 'U', '<C-r>', { desc = 'Redo' })
@@ -153,6 +171,7 @@ vim.api.nvim_create_user_command('Search2LocList', function ()
     vim.cmd('lvimgrep "' .. vim.fn.getreg('/') .. '" %')
     vim.cmd.lwindow()
 end, {})
+
 -- Keeping the cursor centered.
 vim.keymap.set('n', '<C-d>', '<C-d>zz', { desc = 'Scroll downwards' })
 vim.keymap.set('n', '<C-u>', '<C-u>zz', { desc = 'Scroll upwards' })
@@ -192,9 +211,22 @@ vim.keymap.set('v', '<Leader>{', [[<ESC>`>a}<ESC>`<i{<ESC>`>ll]])
 vim.keymap.set('v', '<Leader>$', [[<ESC>`>a$<ESC>`<i$<ESC>`>ll]])
 vim.keymap.set('v', '<Leader>"', [[<ESC>`>a"<ESC>`<i"<ESC>`>ll]])
 vim.keymap.set('v', "<Leader>'", [[<ESC>`>a'<ESC>`<i'<ESC>`>ll]])
+vim.keymap.set('v', "<Leader>`", [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]])
+vim.keymap.set('v', "<Leader>i", [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]])
+vim.keymap.set('v', "<Leader>b", [[<ESC>`>a**<ESC>`<i**<ESC>`>ll]])
 
--- indent
+-- indent reindent
+-- ori editor.action.formatSelection
+-- https://github.com/vscode-neovim/vscode-neovim/discussions/2289
 vim.keymap.set('n', '==', function () c('editor.action.reindentlines') end)
+vim.keymap.set('v', '=', function () c('editor.action.reindentlines') end)
+
+-- problem
+-- M-n https://github.com/microsoft/vscode/issues/41024
+vim.keymap.set('n', '<M-m>', function () c('editor.action.marker.nextInFiles') end)
+vim.keymap.set('n', '<M-p>', function () c('editor.action.marker.prevInFiles') end)
+vim.keymap.set('n', '<C-M-n>', function () c('editor.action.marker.next') end)
+vim.keymap.set('n', '<C-M-p>', function () c('editor.action.marker.prev') end)
 
 -- }}}
 
@@ -202,7 +234,7 @@ vim.keymap.set('n', '==', function () c('editor.action.reindentlines') end)
 
 -- google search selection
 -- TODO or better https://github.com/lalitmee/browse.nvim
-vim.keymap.set('v', '<M-g>', function()
+vim.keymap.set('v', '<C-M-g>', function()
     vim.cmd.normal[["zy]]
     vim.ui.open('https://www.google.com/search?q=' .. tools.uri_encode(vim.fn.eval('@z')))
 end)
@@ -239,4 +271,25 @@ vim.keymap.set('n', '<Leader>fb', function () c('workbench.action.showAllEditors
 
 vim.keymap.set('n', 'gX', function () c('editor.action.openLink') end)
 
+-- vim.keymap.set({'n','v'}, '<C-v>', '<C-v>')
+
+-- vim.opt.selectmode = {}
+-- vim.opt.keymodel = {}
+-- vim.opt.mousemodel = "extend"
+-- vim.cmd('behave xterm')
+
 require 'config.lazy'
+
+-- enabled: 2026-04-07 neovim 0.11.7
+--
+-- { 'rlue/vim-barbaric', -- {{{
+-- { 'xell/vim-easymotion', -- {{{
+-- { 'zzhirong/vim-easymotion-zh', },
+-- { 'smoka7/hop.nvim', -- {{{
+-- { 'nvim-lua/plenary.nvim', },
+-- { 'sontungexpt/url-open', -- {{{
+-- { 'sophacles/vim-processing', -- {{{
+-- { 'Pocco81/HighStr.nvim', -- {{{
+
+
+

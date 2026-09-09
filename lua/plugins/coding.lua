@@ -9,7 +9,9 @@ return {
             -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md
 
             -- ltex
-            require 'lspconfig'.ltex.setup {
+            -- vim.lsp.config('ltex', {
+            vim.lsp.config('ltex', {
+            -- require 'lspconfig'.ltex.setup {
                 filetypes = { 'bib', 'markdown', 'org', 'plaintex', 'rst', 'rnoweb', 'tex' },
                 ---@diagnostic disable-next-line: unused-local
                 on_attach = function(client, bufnr)
@@ -56,10 +58,14 @@ return {
                     },
                 },
 
-            }
+            })
+            -- 2026-04-07 due to many errors
+            -- [ERROR][2026-04-07 16:25:35] ...p/_transport.lua:36	"rpc"	"ltex-ls"	"stderr"	"WARNING: A restricted method in "
+            -- vim.lsp.enable('ltex')
 
             -- javascript typescript
-            require 'lspconfig'.ts_ls.setup {
+            vim.lsp.config('ts_ls', {
+            -- require 'lspconfig'.ts_ls.setup {
                 init_options = {
                     -- plugins = {
                     --     {
@@ -74,10 +80,12 @@ return {
                     'typescript',
                     -- 'vue',
                 },
-            }
+            })
+            vim.lsp.enable('ts_ls')
 
             -- lua
-            require 'lspconfig'.lua_ls.setup {
+            vim.lsp.config('lua_ls', {
+            -- require 'lspconfig'.lua_ls.setup {
                 -- https://www.reddit.com/r/neovim/comments/13uklyy/lua_ls_lspconfig_not_working/
                 -- https://github.com/neovim/nvim-lspconfig/blob/master/lua/lspconfig/server_configurations/lua_ls.lua
                 settings = {
@@ -110,10 +118,12 @@ return {
                         },
                     },
                 },
-            }
+            })
+            vim.lsp.enable('lua_ls')
 
             -- vim
-            require 'lspconfig'.vimls.setup {
+            vim.lsp.config('vimls', {
+            -- require 'lspconfig'.vimls.setup {
                 -- https://github.com/iamcco/vim-language-server
                 -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#vimls
                 cmd = { 'vim-language-server', '--stdio' },
@@ -138,7 +148,8 @@ return {
                     },
                 },
                 single_file_support = true,
-            }
+            })
+            vim.lsp.enable('vimls')
         end,
     }, -- }}}
     -- https://github.com/adoyle-h/lsp-toggle.nvim
@@ -300,9 +311,11 @@ return {
             -- Set up lspconfig.
             local capabilities = require('cmp_nvim_lsp').default_capabilities()
             -- Replace <YOUR_LSP_SERVER> with each lsp server you've enabled.
-            require('lspconfig')['vimls'].setup {
+            vim.lsp.config('vimls', {
+            -- require('lspconfig')['vimls'].setup {
                 capabilities = capabilities
-            }
+            })
+            vim.lsp.enable('vimls')
 
             local luasnip = require 'luasnip'
             -- Require function for tab to work with LUA-SNIP
@@ -584,6 +597,8 @@ return {
 
     -- https://github.com/nvim-treesitter/nvim-treesitter
     { 'nvim-treesitter/nvim-treesitter', -- {{{
+        cond = not vim.g.vscode,
+        branch = 'master',
         build = ':TSUpdate',
         config = function()
             require('nvim-treesitter.configs').setup({
@@ -618,6 +633,7 @@ return {
     }, -- }}}
     -- https://github.com/nvim-treesitter/nvim-treesitter-textobjects
     { 'nvim-treesitter/nvim-treesitter-textobjects', -- {{{
+        cond = not vim.g.vscode,
         event = 'InsertEnter',
         config = function ()
             require('nvim-treesitter.configs').setup({

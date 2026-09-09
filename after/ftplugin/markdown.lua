@@ -1,10 +1,21 @@
 local vol = vim.opt_local
+
+if not vim.g.vscode then
+    vol.concealcursor = 'nc'
+    vol.conceallevel = 2
+    vol.breakindent = true
+    vol.linebreak = true
+    vol.formatoptions = 'mBlrocq'
+    vol.foldmethod = 'expr'
+    vol.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+end
+
+if vim.g.vscode then
+    vim.keymap.del('n', 'gO', { buffer = true })
+end
+
+vol.tabstop = 2
 vol.shiftwidth = 2
-vol.concealcursor = 'nc'
-vol.conceallevel = 2
-vol.breakindent = true
-vol.linebreak = true
-vol.formatoptions = 'mBlrocq'
 vol.comments:append(':-')
 vol.comments:remove('fb:-')
 
@@ -15,9 +26,6 @@ vks('v', '<Leader>i', [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>c', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>h', [[<ESC>`>a==}<ESC>`<i{==<ESC>`>ll]], { buffer = true })
-
-vol.foldmethod = 'expr'
-vol.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
 vim.cmd[[
 let s:textbundle_filename = expand('%:r')

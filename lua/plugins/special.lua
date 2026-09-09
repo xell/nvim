@@ -1,5 +1,16 @@
 -- vim:
 return {
+    {
+        'MeanderingProgrammer/render-markdown.nvim',
+        ft = { 'markdown' },
+        dependencies = { 'nvim-treesitter/nvim-treesitter' },
+        opts = {
+            -- so a marker reveals on the line you are editing; good for exercising
+            -- the island's cursor-line gate. render-markdown removes its extmarks
+            -- near the cursor, and the island follows on CursorMoved.
+            anti_conceal = { enabled = true },
+        },
+    },
     -- https://github.com/prichrd/netrw.nvim
     { 'prichrd/netrw.nvim', -- {{{
         cond = not vim.g.vscode,
@@ -18,6 +29,7 @@ return {
     }, -- }}}
     -- https://github.com/andymass/vim-matchup {{{
     { 'andymass/vim-matchup',
+        cond = not vim.g.vscode,
         init = function()
             vim.g.matchup_matchparen_offscreen = { method = 'popup' }
         end,

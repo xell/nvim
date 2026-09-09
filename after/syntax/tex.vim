@@ -1,3 +1,6 @@
+if exists('g:vscode')
+    finish
+endif
 " Global!
 " hi! default link Folded NormalFloat
 

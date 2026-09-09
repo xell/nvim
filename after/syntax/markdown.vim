@@ -1,3 +1,6 @@
+if exists('g:vscode')
+    finish
+endif
 syntax case ignore
 " must not use syntax clear lest the override / redefinition won't work
 "syntax clear

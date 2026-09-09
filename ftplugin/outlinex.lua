@@ -1,7 +1,8 @@
 local vol = vim.opt_local
+local indent = 4
 -- options {{{
-vol.tabstop = 2
-vol.shiftwidth = 2
+vol.tabstop = indent
+vol.shiftwidth = indent
 
 if not vim.g.vscode then
     vol.concealcursor = 'nc'
@@ -11,11 +12,11 @@ if not vim.g.vscode then
     vol.linebreak = true
     vol.formatoptions = 'mBlrocq'
     vol.foldcolumn = '0'
+    vol.formatlistpat = '^\\s*\\d\\+\\.\\s\\+\\|^\\s*[-*+]\\s\\+\\|^\\[^\\ze[^\\]]\\+\\]:\\&^.\\{4\\}'
 end
 
 vol.comments:append(':-')
 vol.comments:remove('fb:-')
-vol.formatlistpat = '^\\s*\\d\\+\\.\\s\\+\\|^\\s*[-*+]\\s\\+\\|^\\[^\\ze[^\\]]\\+\\]:\\&^.\\{4\\}'
 vol.iskeyword:append('#')
 -- vol.breakindentopt = 'shift:2'
 -- }}}
@@ -81,7 +82,10 @@ end, { buffer = true, desc = 'Open in Marked 2' })
 -- local createSeditor = require('yode-nvim.createSeditor')
 -- }}}
 
-local yode = require('yode-nvim')
+local yode = nil
+if not vim.g.vscode then
+    yode = require('yode-nvim')
+end
 local t = tostring
 
 -- return ( REAL fold line, fold level )
@@ -92,7 +96,7 @@ local function get_fold_level(bufnr, linenr) -- {{{
         line = vim.api.nvim_buf_get_lines(bufnr, up_linenr - 1, up_linenr, true)[1]
         if line == '' then return up_linenr, 0 end
         if string.find(line, '^ *-') then
-            return up_linenr, ((string.find(line, '[^ ]') + 1) / 2)
+            return up_linenr, math.floor( (string.find(line, '[^ ]') - 1) / indent) + 1
         else
             up_linenr = up_linenr - 1
         end
@@ -464,10 +468,12 @@ end
 -- blank line is 0
 _G.outlinexFold = function ()
     local line = vim.fn.getline(vim.v.lnum)
-    local level = string.find(line, '[^ ]')
+    -- the number of white spaces
+    local num_white_space = string.find(line, '[^ ]') - 1
+    local level = math.floor(num_white_space / indent) + 1
     if level >= 1 then
         if string.find(line, '^ *-') then
-            return ('>' .. ((level + 1) / 2))
+            return ('>' .. level)
         else
             -- this will treat mutliline item as a fold
             -- return ('' .. ((level - 1) / 2))

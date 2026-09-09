@@ -1,4 +1,7 @@
 " vim:fdm=marker
+if exists('g:vscode')
+    finish
+endif
 syntax case ignore
 syntax clear
 syntax spell toplevel
@@ -15,11 +18,9 @@ syntax spell toplevel
 
 " syn match markdownListMarkerConceal "\%(\t\| \{0,4\}\)\zs[-*+]\ze\%(\s\+\S\)\@=" conceal cchar=●
 
-if exists('g:vscode')
     let s:circle_symbol = ['○', '', '', '', '', '󰝦']
     "exec 'syn match Conceal /^\s*\zs-\ze / conceal cchar=' . ($TERM_PROGRAM ==# 'WezTerm' ? s:circle_symbol[1] : s:circle_symbol[1])
     call matchadd('Conceal','^\s*\zs-\ze ', 20, -1, {'conceal': $TERM_PROGRAM ==# 'WezTerm' ? s:circle_symbol[1] : s:circle_symbol[1]})
-endif
 
 " hi! link Conceal Normal
 " }}}

@@ -1,5 +1,16 @@
 -- vim:
 return {
+    -- https://github.com/trkwyk/scrollfix.nvim
+    { "trkwyk/scrollfix.nvim",
+        opts = {
+            scrollfix = 60, -- percentage of the window height to lock the cursor, default to 50
+            -- set scrolloff to 50 and fixeof to false is essentially scrolloff=999
+            fixeof = false, -- fix cursor still and leave spaces under when near EOF, default to true
+            scrollinfo = true, -- show info when scrollfix is applied, default to false
+            -- for LazyVim users: if you want to disable this plugin for LazyVim dashboard, use this
+            skip_filetypes = { "snacks_dashboard" }, -- disable scrollfix for specified file types, default to {}
+        }
+    },
     -- https://github.com/f-person/auto-dark-mode.nvim
     { 'f-person/auto-dark-mode.nvim', -- {{{
         cond = not vim.g.vscode,
@@ -20,6 +31,7 @@ return {
 
     -- https://github.com/lukas-reineke/indent-blankline.nvim
     { 'lukas-reineke/indent-blankline.nvim', -- {{{
+        cond = not vim.g.vscode,
         main = 'ibl',
         config = function()
             require('ibl').setup({
@@ -27,6 +39,26 @@ return {
             })
         end,
     }, -- }}}
+
+    -- https://github.com/declancm/cinnamon.nvim
+    { "declancm/cinnamon.nvim",
+        enabled = false,
+        version = "*", -- use latest release
+        opts = {
+            -- change default options here
+        },
+        config = function()
+            require("cinnamon").setup {
+                -- Enable all provided keymaps
+                keymaps = {
+                    basic = true,
+                    extra = true,
+                },
+                -- Only scroll the window
+                options = { mode = "window" },
+            }
+        end,
+    },
 
     -- https://github.com/ipod825/taboverflow.vim
     { 'ipod825/taboverflow.vim',
@@ -283,6 +315,8 @@ endfunction
     }, -- }}}
     -- https://github.com/Aasim-A/scrollEOF.nvim
     { 'Aasim-A/scrollEOF.nvim', -- {{{
+        enabled = false,
+        cond = not vim.g.vscode,
         event = { 'CursorMoved', 'WinScrolled' },
         opts = {},
         config = function ()

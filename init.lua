@@ -53,6 +53,7 @@ vim.keymap.set('i', '<M-d>', '<C-x><C-k>')
 -- }}}
 
 -- UI GUI {{{
+vim.o.guifont = "Sarasa Term SC Nerd:h14"
 vim.o.number = true
 vim.o.breakindent = true
 vim.o.breakindentopt = 'list:-2'
@@ -68,7 +69,7 @@ vim.o.report = 0
 vim.o.equalalways = false
 vim.o.splitright = true
 vim.o.splitbelow = true
-vim.o.scrolloff = 10
+-- vim.o.scrolloff = 10
 
 -- if 'listchars' or 'fillchars' contains double width characters
 vim.o.ambiwidth = 'single'
@@ -105,6 +106,30 @@ vim.keymap.set('n', '<Leader>hc', function()
     end
     vim.opt.colorcolumn:append('' .. col)
 end, { desc = 'Add or remove colorcolumn' })
+
+-- keep bar cursor
+local saved_guicursor
+
+local function set_cursor_bar()
+  -- Clearing guicursor stops nvim's teardown from emitting terminfo Se
+  -- (ESC[2 q, steady block), which would otherwise override the write below.
+  -- Plain DECSCUSR, never a \ePtmux; passthrough: tmux's allow-passthrough is
+  -- off by default, so passthrough is silently swallowed. Writing it plainly
+  -- also keeps tmux's own per-pane cursor state in sync. Inside tmux the
+  -- decisive fix is the Se override in ~/.tmux.conf, not this hook.
+  saved_guicursor = vim.o.guicursor
+  vim.o.guicursor = ""
+  io.write("\27[5 q")
+end
+
+vim.api.nvim_create_autocmd({ "VimLeave", "VimSuspend" }, { callback = set_cursor_bar })
+vim.api.nvim_create_autocmd("VimResume", {
+  callback = function()
+    if saved_guicursor then
+      vim.o.guicursor = saved_guicursor
+    end
+  end,
+})
 
 -- statusline {{{
 -- let g:mystatusline1 = '\ %{winnr()}\ %<%f\ %h%y%m%r\ [%{&ff}]\ [%{&fenc}]'

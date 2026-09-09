@@ -2,6 +2,7 @@
 return {
     -- https://github.com/xiyaowong/fast-cursor-move.nvim remap j k
     { 'xiyaowong/fast-cursor-move.nvim', -- {{{
+        cond = not vim.g.vscode,
         config = function ()
             vim.defer_fn(function ()
                 -- map j and k to original in visual linewise & blockwise modes
@@ -15,11 +16,11 @@ return {
     { 'rlue/vim-barbaric', -- {{{
         dev = true,
         init = function ()
-            vim.g.barbaric_ime = 'macism'
+            vim.g.barbaric_ime = vim.fn.expand('~/.local/bin/macism')
             vim.g.barbaric_default = 'com.apple.keylayout.ABC'
             -- The scope where alternate input methods persist (buffer, window, tab, global)
             vim.g.barbaric_scope = 'buffer'
-            -- vim.o.ttimeoutlen = 0 -- default 50
+            vim.o.ttimeoutlen = 0 -- default 50
         end
     }, -- }}}
 
@@ -344,6 +345,7 @@ return {
 
     -- https://github.com/xell/yode-nvim
     { 'xell/yode-nvim', -- {{{
+        cond = not vim.g.vscode,
         dev = true,
         config = function()
             -- according to readme, submodule should be used
@@ -361,6 +363,7 @@ return {
 
     -- https://github.com/3rd/image.nvim
     { '3rd/image.nvim', -- {{{
+        enabled = false,
         cond = vim.fn.has('gui_running') == 0 or not vim.g.vscode,
         event = 'VeryLazy',
         dependencies = {
