@@ -21,10 +21,10 @@ vim.o.smartcase = true
 vim.o.incsearch = true
 vim.o.inccommand = 'split'
 vim.o.wrapscan = false
-vim.o.wildignore = '*.o,*.obj,*.dll,*.exe,*.so,*.a,*.lib,*.pyc,*.pyo,*.pyd,*.swp,*.swo,*.class,*.DS_Store,*.orig,*.db,*.javac,*.pyc,*.aux,*.out,*.toc'
+vim.o.wildignore =
+'*.o,*.obj,*.dll,*.exe,*.so,*.a,*.lib,*.pyc,*.pyo,*.pyd,*.swp,*.swo,*.class,*.DS_Store,*.orig,*.db,*.javac,*.pyc,*.aux,*.out,*.toc'
 vim.o.suffixesadd = '.java,.rs,.lua'
 
-vim.o.autochdir = true
 vim.o.updatetime = 500
 vim.o.modelineexpr = true
 
@@ -44,6 +44,7 @@ vim.keymap.set('i', '<M-space>', '<C-x><C-k>')
 -- }}}
 
 -- UI GUI {{{
+vim.o.title = true
 vim.o.guifont = "Sarasa Term SC Nerd:h14"
 vim.o.number = true
 vim.o.breakindent = true
@@ -85,6 +86,11 @@ vim.keymap.set('n', '<Leader>nn', function()
     vim.wo.relativenumber = not vim.wo.relativenumber
 end, { desc = 'Toggle relative number' })
 
+-- show/hide number
+vim.keymap.set('n', '<Leader>nN', function()
+    vim.wo.number = not vim.wo.number
+end, { desc = 'Show/hide number' })
+
 -- set colorcolumn cc
 vim.keymap.set('n', '<Leader>hc', function()
     local col = vim.fn.virtcol('.')
@@ -102,24 +108,30 @@ end, { desc = 'Add or remove colorcolumn' })
 local saved_guicursor
 
 local function set_cursor_bar()
-  -- Clearing guicursor stops nvim's teardown from emitting terminfo Se
-  -- (ESC[2 q, steady block), which would otherwise override the write below.
-  -- Plain DECSCUSR, never a \ePtmux; passthrough: tmux's allow-passthrough is
-  -- off by default, so passthrough is silently swallowed. Writing it plainly
-  -- also keeps tmux's own per-pane cursor state in sync. Inside tmux the
-  -- decisive fix is the Se override in ~/.tmux.conf, not this hook.
-  saved_guicursor = vim.o.guicursor
-  vim.o.guicursor = ""
-  io.write("\27[5 q")
+    -- Clearing guicursor stops nvim's teardown from emitting terminfo Se
+    -- (ESC[2 q, steady block), which would otherwise override the write below.
+    -- Plain DECSCUSR, never a \ePtmux; passthrough: tmux's allow-passthrough is
+    -- off by default, so passthrough is silently swallowed. Writing it plainly
+    -- also keeps tmux's own per-pane cursor state in sync. Inside tmux the
+    -- decisive fix is the Se override in ~/.tmux.conf, not this hook.
+    saved_guicursor = vim.o.guicursor
+    vim.o.guicursor = ""
+    io.write("\27[5 q")
 end
 
 vim.api.nvim_create_autocmd({ "VimLeave", "VimSuspend" }, { callback = set_cursor_bar })
 vim.api.nvim_create_autocmd("VimResume", {
-  callback = function()
-    if saved_guicursor then
-      vim.o.guicursor = saved_guicursor
-    end
-  end,
+    callback = function()
+        if saved_guicursor then
+            vim.o.guicursor = saved_guicursor
+        end
+    end,
+})
+
+require('wordcount').setup({
+    format = function(c)
+        return string.format(' zh:%d en:%dw/%dc ', c.cjk, c.words, c.chars)
+    end,
 })
 
 -- statusline {{{
@@ -150,7 +162,7 @@ StatuslineActive = function()
         -- ' %<%f %h%y%m%r ',
         vim.opt.fileformat:get() == 'unix' and '' or '[' .. vim.opt.fileformat:get() .. '] ',
         vim.opt.fileencoding:get() == 'utf-8' and '' or '[' .. vim.opt.fileencoding:get() .. '] ',
-        vim.fn.exists('*FugitiveStatusline') == 0 and '' or (function ()
+        vim.fn.exists('*FugitiveStatusline') == 0 and '' or (function()
             local fs = vim.fn['fugitive#statusline']()
             if fs ~= '' then
                 fs = string.sub(fs, 6, -3)
@@ -159,6 +171,7 @@ StatuslineActive = function()
                 return ''
             end
         end)(),
+        require('wordcount').statusline(),
         '%=%-14.(%l,%c%V%) %L %P ',
     }
 end
@@ -191,6 +204,7 @@ vim.cmd [[
 
 -- Special settings {{{
 vim.g.netrw_liststyle = 3
+vim.g.netrw_keepdir = 0
 
 vim.g.seditor_table = {}
 
@@ -232,7 +246,7 @@ for i = 1, 10 do
 end
 
 -- <M-h/j/k/l>
-for c in ('hjkl'):gmatch'.' do
+for c in ('hjkl'):gmatch '.' do
     vim.keymap.set('n', '<M-' .. c .. '>', '<C-w>' .. c)
 end
 
@@ -282,8 +296,8 @@ for i = 1, 9, 1 do
     vim.keymap.set('n', '<C-' .. i .. '>', i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
 end
 -- edit current buf in a new tab
-vim.api.nvim_create_user_command('TabnewEditBuf', function ()
-    vim.cmd[[exec 'tabe +buf\ ' . bufnr()]]
+vim.api.nvim_create_user_command('TabnewEditBuf', function()
+    vim.cmd [[exec 'tabe +buf\ ' . bufnr()]]
 end, {})
 
 -- window full screen plugin
@@ -295,7 +309,7 @@ vim.keymap.set('n', 'L', '<CMD>bnext<CR>')
 --- }}}
 
 -- Fold {{{
-vim.o.foldmethod = 'marker'
+-- vim.o.foldmethod = 'marker'
 vim.o.foldcolumn = 'auto' -- nvim-spec
 vim.o.foldlevel = 99
 vim.o.foldlevelstart = 99
@@ -303,7 +317,7 @@ vim.o.foldlevelstart = 99
 vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 
 -- toggle fold
-vim.cmd[[nnoremap <silent> <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
+vim.cmd [[nnoremap <silent> <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
 
 vim.keymap.set('n', 'z[', function()
     local current_foldlevel = vim.call('foldlevel', '.')
@@ -338,10 +352,10 @@ vim.keymap.set('v', 'y', 'ygv<Esc>')
 vim.keymap.set('n', 'P', 'gP')
 
 -- select pasted content
-vim.cmd[[nnoremap <expr> g<C-v> '`[' . getregtype()[0] . '`]']]
+vim.cmd [[nnoremap <expr> g<C-v> '`[' . getregtype()[0] . '`]']]
 
 -- indent the just pasted content
-vim.keymap.set('n', '<Leader>=', '`[V`]==', { desc = 'Indent just pasted' })
+vim.keymap.set('n', '<Leader>P=', '`[V`]==', { desc = 'Indent just pasted' })
 vim.keymap.set('n', '<Leader>P', 'p`[V`]==', { desc = 'Paste and indent' })
 
 -- - to g_ last non-blank char
@@ -392,7 +406,7 @@ vim.keymap.set('n', '<Leader>ns', function() vim.fn.setreg('/', '') end, { desc 
 vim.keymap.set('n', '<Leader>nh', function() vim.o.hlsearch = false end, { desc = 'Hide search' })
 vim.keymap.set('n', '<Leader>h', function() vim.o.hlsearch = not vim.o.hlsearch end, { desc = 'Hide/show search' })
 vim.keymap.set('v', '<Leader>/', 'y/<C-r>=@"<CR><CR>', { desc = 'Search selected' })
-vim.api.nvim_create_user_command('Search2LocList', function ()
+vim.api.nvim_create_user_command('Search2LocList', function()
     vim.cmd('lvimgrep "' .. vim.fn.getreg('/') .. '" %')
     vim.cmd.lwindow()
 end, {})
@@ -420,7 +434,7 @@ vim.api.nvim_create_autocmd(
 vim.keymap.set('n', 'Y', '^yg_')
 
 -- toggle conceallevel
-vim.keymap.set('n', '<Leader>L', function ()
+vim.keymap.set('n', '<Leader>L', function()
     if vim.wo.conceallevel == 2 then
         vim.wo.conceallevel = 0
     elseif vim.wo.conceallevel == 0 then
@@ -448,7 +462,7 @@ vim.api.nvim_create_autocmd({ 'BufReadPost' }, {
 -- Capitalize all words in titles of publications and documents, except a, an, the, at, by, for, in, of, on, to, up, and, as, but, or, and nor.
 -- https://taptoe.wordpress.com/2013/02/06/vim-capitalize-every-first-character-of-every-word-in-a-sentence/
 vim.api.nvim_create_user_command('Capitalize', function()
-    vim.cmd[[s/\v^\a|\:\s\a|<%(a>|an>|and>|as>|at>|but>|by>|for>|in>|nor>|of>|on>|or>|the>|to>|up>)@!\a/\U&/g]]
+    vim.cmd [[s/\v^\a|\:\s\a|<%(a>|an>|and>|as>|at>|but>|by>|for>|in>|nor>|of>|on>|or>|the>|to>|up>)@!\a/\U&/g]]
 end, {})
 
 -- poorman's surrounding
@@ -504,7 +518,7 @@ vim.keymap.set('c', '<C-j>', '<Down>')
 -- google search selection
 -- TODO or better https://github.com/lalitmee/browse.nvim
 vim.keymap.set('v', '<M-g>', function()
-    vim.cmd.normal[["zy]]
+    vim.cmd.normal [["zy]]
     vim.ui.open('https://www.google.com/search?q=' .. tools.uri_encode(vim.fn.eval('@z')))
 end)
 
@@ -589,7 +603,7 @@ vim.keymap.set('n', '<M-i>', '<CMD>Inspect<CR>')
 
 -- Abbreviations {{{
 vim.keymap.set('ca', 'xfn', 'echo expand("%:p")')
-vim.keymap.set('ca', 'ss', function ()
+vim.keymap.set('ca', 'ss', function()
     vim.cmd [[bel 10new]]
     vim.wo.scrolloff = 0
 end)
@@ -598,21 +612,68 @@ vim.keymap.set('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
 
 require('lsp')
 
+-- auto project-based dir
+vim.o.autochdir = false
+local root_markers = { ".git", "package.json", "Makefile", "pyproject.toml", "Cargo.toml" }
+vim.api.nvim_create_autocmd("BufEnter", {
+    pattern = "*",
+    callback = function(args)
+        local buf = args.buf
+        -- skip unnamed/special buffers (terminals, help, etc.)
+        if vim.bo[buf].buftype ~= "" then return end
 
+        local root = vim.fs.root(buf, root_markers)
+        if root and root ~= vim.fn.getcwd() then
+            -- or lcd if wants per-window roots
+            vim.cmd.cd(root)
+        end
+    end,
+})
 
+-- auto treesitter
+vim.api.nvim_create_autocmd('FileType', {
+    callback = function(args)
+        -- only when a parser actually exists for this filetype
+        if vim.treesitter.get_parser(args.buf, nil, { error = false }) then
+            -- optional: skip very large files, TS parses the whole buffer
+            local name = vim.api.nvim_buf_get_name(args.buf)
+            local st = name ~= '' and vim.uv.fs_stat(name)
+            if st and st.size > 512 * 1024 then return end
 
+            -- no need in new treesitter version
+            -- vim.treesitter.start(args.buf)
+            vim.wo[0][0].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+            vim.wo[0][0].foldmethod = 'expr'
+        end
+    end,
+})
 
+-- Bootstrap lazy.nvim
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not (vim.uv or vim.loop).fs_stat(lazypath) then
+    local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+    vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+end
+vim.opt.rtp:prepend(lazypath)
 
-
-
-
-
-
-
---
---
---
---
---
---
---
+-- Setup lazy.nvim
+require("lazy").setup({
+    spec = {
+        -- import your plugins
+        { import = "plugins" },
+    },
+    -- Configure any other settings here. See the documentation for more details.
+    -- colorscheme that will be used when installing plugins.
+    install = { colorscheme = { "habamax" } },
+    -- automatically check for plugin updates
+    checker = { enabled = false },
+    dev = {
+        path = "~/Developer/vim/scripts",
+        fallback = true,
+    },
+    change_detection = {
+        -- automatically check for config file changes and reload the ui
+        enabled = true,
+        notify = false, -- get a notification when changes are found
+    },
+})
