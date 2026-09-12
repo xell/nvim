@@ -28,28 +28,16 @@ return {
         cond = not vim.g.vscode,
         main = 'ibl',
         config = function()
-            -- local hooks = require("ibl.hooks")
-            --
-            -- hooks.register(
-            --     hooks.type.ACTIVE,
-            --     function(bufnr)
-            --         -- Get the window displaying the buffer (or fallback to current window)
-            --         local win = vim.fn.bufwinid(bufnr)
-            --         if win == -1 then
-            --             win = 0
-            --         end
-            --
-            --         -- Check if w:test == 1
-            --         local status, test_val = pcall(vim.api.nvim_win_get_var, win, "nv_md_preview")
-            --         if status and test_val == 1 then
-            --             return false -- Returning false disables IBL for this buffer/window
-            --         end
-            --
-            --         return true
-            --     end
-            -- )
             require('ibl').setup({
                 indent = { char = '│', highlight = { 'Whitespace' } },
+            })
+            vim.api.nvim_create_autocmd("User", {
+                pattern = "GneovimMarkdownPreviewChanged",
+                callback = function(event)
+                    require("ibl").setup_buffer(event.data.buf, {
+                        enabled = not event.data.preview,
+                    })
+                end,
             })
         end,
     }, -- }}}

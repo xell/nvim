@@ -367,6 +367,8 @@ vim.keymap.set('', '^', '0')
 -- move in insert mode
 vim.keymap.set({ 'i', 'c' }, '<M-h>', '<Left>')
 vim.keymap.set({ 'i', 'c' }, '<M-l>', '<Right>')
+vim.keymap.set({ 'i', 'c' }, '<M-j>', '<Down>')
+vim.keymap.set({ 'i', 'c' }, '<M-k>', '<Up>')
 vim.keymap.set({ 'i', 'c' }, '<M-6>', '<Home>')
 vim.keymap.set({ 'i', 'c' }, '<M-4>', '<End>')
 vim.keymap.set('i', '<M-->', '<PageDown>')

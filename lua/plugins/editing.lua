@@ -200,6 +200,8 @@ return {
                 sources = cmp.config.sources({
                     { name = 'nvim_lsp' },
                     { name = 'luasnip' }, -- For luasnip users.
+                    -- relative to the buffer's directory; triggers after `./`, `../`, `~/` or `/`
+                    { name = 'path' },
                     {
                         name = 'dictionary',
                         keyword_length = 3,
@@ -294,4 +296,89 @@ return {
             vim.g.matchup_matchparen_offscreen = { method = 'popup' }
         end,
     }, -- }}}
+
+    -- https://github.com/meanderingprogrammer/render-markdown.nvim {{{
+    { "MeanderingProgrammer/render-markdown.nvim",
+        ft = { "markdown" },
+        dependencies = {
+            "nvim-treesitter/nvim-treesitter",
+            -- Add this only if you do not already load another icon provider:
+            -- "nvim-tree/nvim-web-devicons",
+        },
+        opts = {
+            enabled = true,
+
+            -- These are the upstream defaults. They make the grid renderer
+            -- active in Normal, command line, and terminal modes.
+            render_modes = { "n", "c", "t" },
+
+            -- Keep the plugin's normal grid mode table renderer enabled.
+            -- Gneovim disables the whole plugin while CM6 preview is active,
+            -- so it cannot compete with the island's semantic HTML tables.
+            pipe_table = {
+                enabled = true,
+            },
+        },
+        config = function(_, opts)
+            local render_markdown = require("render-markdown")
+            render_markdown.setup(opts)
+
+            local group = vim.api.nvim_create_augroup(
+                "gneovim_render_markdown",
+                { clear = true }
+            )
+
+            -- render-markdown is buffer scoped, whereas Gneovim preview is
+            -- window scoped. If any visible window for this buffer uses CM6,
+            -- choose the safe buffer wide policy and disable render-markdown.
+            local function buffer_has_live_preview(buf)
+                for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+                    if vim.w[win].gnv_md_preview == 1 then
+                        return true
+                    end
+                end
+                return false
+            end
+
+            local function sync(buf, preferred_win)
+                if not vim.api.nvim_buf_is_valid(buf) then
+                    return
+                end
+
+                local win = preferred_win
+                if not win
+                    or not vim.api.nvim_win_is_valid(win)
+                    or vim.api.nvim_win_get_buf(win) ~= buf
+                then
+                    win = vim.fn.bufwinid(buf)
+                end
+                if win == -1 then
+                    return
+                end
+
+                vim.api.nvim_win_call(win, function()
+                    render_markdown.set_buf(not buffer_has_live_preview(buf))
+                end)
+            end
+
+            vim.api.nvim_create_autocmd("User", {
+                group = group,
+                pattern = "GneovimMarkdownPreviewChanged",
+                callback = function(event)
+                    sync(event.data.buf, event.data.win)
+                end,
+            })
+
+            -- Covers the rare case where this plugin is lazy loaded after the
+            -- initial Gneovim preview event was already emitted.
+            vim.schedule(function()
+                for _, win in ipairs(vim.api.nvim_list_wins()) do
+                    local buf = vim.api.nvim_win_get_buf(win)
+                    if vim.bo[buf].filetype == "markdown" then
+                        sync(buf, win)
+                    end
+                end
+            end)
+        end,
+    } -- }}}
 }

@@ -9,25 +9,47 @@ return {
             -- https://github.com/nvim-telescope/telescope.nvim/issues/2188
             local actions = require('telescope.actions')
             local action_state = require 'telescope.actions.state'
-            -- https://github.com/nvim-telescope/telescope.nvim/blob/master/lua/telescope/mappings.lua
-            local map_s_cr = {
-                i = {
-                    ['<S-CR>'] = actions.select_tab_drop,
-                    ["<C-j>"] = actions.move_selection_next,
-                    ["<C-k>"] = actions.move_selection_previous,
-                },
-                n = {
-                    ['<S-CR>'] = actions.select_tab_drop,
-                    ['<C-Y>'] = function ()
-                        -- vim.fn.setreg('a', action_state.get_selected_entry())
-                        vim.print(action_state.get_selected_entry()[1])
-                    end
-                },
-            }
+            -- Yank the highlighted entry into the unnamed register (and + when
+            -- clipboard=unnamedplus) without closing the picker: the matched
+            -- line for grep-style hits, the absolute path for file pickers,
+            -- otherwise the entry's text (heading, help tag, register content...).
+            local yank_entry = function()
+                local entry = action_state.get_selected_entry()
+                if not entry then return end
+                local text
+                if type(entry.text) == 'string' then
+                    text = entry.text
+                elseif type(entry.path) == 'string' then
+                    text = entry.path
+                elseif type(entry.content) == 'string' then
+                    text = entry.content
+                elseif type(entry.ordinal) == 'string' then
+                    text = entry.ordinal
+                elseif type(entry.value) == 'string' then
+                    text = entry.value
+                else
+                    text = tostring(entry[1])
+                end
+                vim.fn.setreg('"', text)
+                if vim.o.clipboard:find('unnamedplus', 1, true) then
+                    vim.fn.setreg('+', text)
+                end
+                vim.notify('Yanked: ' .. text)
+            end
+            -- Open the directory holding the highlighted entry (in netrw)
+            -- instead of the entry itself. No-op for entries without a file.
+            local open_entry_dir = function(prompt_bufnr)
+                local entry = action_state.get_selected_entry()
+                local file = entry and (entry.path or entry.filename)
+                if type(file) ~= 'string' then return end
+                actions.close(prompt_bufnr)
+                vim.cmd.edit(vim.fs.dirname(vim.fn.fnamemodify(file, ':p')))
+                -- yazi instead: require('yazi').yazi(nil, vim.fs.dirname(vim.fn.fnamemodify(file, ':p')))
+            end
             -- layout https://www.reddit.com/r/neovim/comments/1ar56k0/how_to_see_deeply_nested_file_names_in_telescope/
             require 'telescope'.setup {
                 defaults = {
-                    path_display = { 'truncate' }, -- 'smart'
+                    path_display = { 'filename_first' }, -- 'smart', 'truncate'
                     -- color_devicons = true,
                     layout_strategy = 'flex',
                     layout_config = {
@@ -35,26 +57,25 @@ return {
                         flex = { flip_columns = 110, },
                         preview_cutoff = 10,
                     },
+                    -- applies to every picker, builtin and extension alike
+                    -- https://github.com/nvim-telescope/telescope.nvim/blob/master/lua/telescope/mappings.lua
+                    mappings = {
+                        i = {
+                            ['<S-CR>'] = { actions.select_tab_drop, type = 'action', opts = { desc = 'open in tab (drop)' } },
+                            -- upstream defaults: <C-j> is nop, <C-k> is preview_scrolling_right
+                            ['<C-j>'] = { actions.move_selection_next, type = 'action', opts = { desc = 'next entry' } },
+                            ['<C-k>'] = { actions.move_selection_previous, type = 'action', opts = { desc = 'previous entry' } },
+                            ['<C-y>'] = { yank_entry, type = 'action', opts = { desc = 'yank entry path/text' } },
+                            ['<C-o>'] = { open_entry_dir, type = 'action', opts = { desc = 'open entry directory (netrw)' } },
+                        },
+                        n = {
+                            ['<S-CR>'] = { actions.select_tab_drop, type = 'action', opts = { desc = 'open in tab (drop)' } },
+                            ['<C-y>'] = { yank_entry, type = 'action', opts = { desc = 'yank entry path/text' } },
+                            ['<C-o>'] = { open_entry_dir, type = 'action', opts = { desc = 'open entry directory (netrw)' } },
+                        },
+                    },
                 },
                 pickers = {
-                    buffers = {
-                        mappings = map_s_cr,
-                    },
-                    find_files = {
-                        mappings = map_s_cr,
-                    },
-                    git_files = {
-                        mappings = map_s_cr,
-                    },
-                    old_files = {
-                        mappings = map_s_cr,
-                    },
-                    live_grep = {
-                        mappings = map_s_cr,
-                    },
-                    grep_string = {
-                        mappings = map_s_cr,
-                    },
                     -- https://github.com/nvim-telescope/telescope.nvim/issues/2115#issuecomment-1366575821
                     current_buffer_fuzzy_find = {
 
@@ -161,7 +182,8 @@ return {
     { 'nvim-telescope/telescope-frecency.nvim', -- {{{
         cond = not vim.g.vscode,
         -- to prevent colorscheme highlight problem
-        keys = {{ '<Leader>ff', '<cmd>Telescope frecency<CR>', desc = 'Telescope frecency' }},
+        -- definition in the above
+        -- keys = {{ '<Leader>ff', '<cmd>Telescope frecency<CR>', desc = 'Telescope frecency' }},
         config = function()
             require('telescope').setup {
                 extensions = {
@@ -202,6 +224,7 @@ return {
     }, -- }}}
 
     -- https://github.com/LukasPietzschmann/telescope-tabs
+    -- https://codeberg.org/LukasPietzschmann/telescope-tabs
     { 'LukasPietzschmann/telescope-tabs',
         cond = not vim.g.vscode,
         config = function()
@@ -223,3 +246,5 @@ return {
         dependencies = { 'nvim-telescope/telescope.nvim' },
     }
 }
+
+-- <Tab> multi-selection, then <M-q> (selected), <C-q> (all) to qflist

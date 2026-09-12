@@ -2,7 +2,7 @@ local vol = vim.opt_local
 
 if vim.g.gneovim then vim.keymap.set('n', '<Leader>M', function()
     vim.cmd('MarkdownLivePreviewToggle')
-end, { desc = 'Toggle Markdown Live Preview' })
+end, { buffer = true, desc = 'Toggle Markdown Live Preview' })
 end
 
 if not vim.g.vscode then
