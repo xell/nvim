@@ -8,6 +8,7 @@ return {
             -- https://www.reddit.com/r/neovim/comments/11otu7l/using_telescope_selection_for_custom_function/
             -- https://github.com/nvim-telescope/telescope.nvim/issues/2188
             local actions = require('telescope.actions')
+            local action_set = require('telescope.actions.set')
             local action_state = require 'telescope.actions.state'
             -- Yank the highlighted entry into the unnamed register (and + when
             -- clipboard=unnamedplus) without closing the picker: the matched
@@ -46,6 +47,37 @@ return {
                 vim.cmd.edit(vim.fs.dirname(vim.fn.fnamemodify(file, ':p')))
                 -- yazi instead: require('yazi').yazi(nil, vim.fs.dirname(vim.fn.fnamemodify(file, ':p')))
             end
+            -- Save the search query to Vim's search register (@/) and history
+            -- when opening a result from grep pickers so `n` jumps to matches.
+            local attach_save_search = function()
+                return function(prompt_bufnr, _)
+                    local search_text
+                    action_set.select:enhance {
+                        pre = function()
+                            local prompt = action_state.get_current_line()
+                            local picker = action_state.get_current_picker(prompt_bufnr)
+                            if prompt and prompt ~= '' then
+                                search_text = prompt
+                            elseif picker and picker.opts and picker.opts.search and picker.opts.search ~= '' then
+                                search_text = picker.opts.search
+                            end
+                        end,
+                        post = function()
+                            if search_text and search_text ~= '' then
+                                local pattern = search_text
+                                -- Strip leading ' if fzf exact-match prefix was used (e.g. ,fg)
+                                if pattern:match("^'(.+)$") then
+                                    pattern = pattern:sub(2)
+                                end
+                                vim.fn.setreg('/', pattern)
+                                vim.fn.histadd('search', pattern)
+                                vim.v.hlsearch = 1
+                            end
+                        end,
+                    }
+                    return true
+                end
+            end
             -- layout https://www.reddit.com/r/neovim/comments/1ar56k0/how_to_see_deeply_nested_file_names_in_telescope/
             require 'telescope'.setup {
                 defaults = {
@@ -76,6 +108,12 @@ return {
                     },
                 },
                 pickers = {
+                    grep_string = {
+                        attach_mappings = attach_save_search(),
+                    },
+                    live_grep = {
+                        attach_mappings = attach_save_search(),
+                    },
                     -- https://github.com/nvim-telescope/telescope.nvim/issues/2115#issuecomment-1366575821
                     current_buffer_fuzzy_find = {
 

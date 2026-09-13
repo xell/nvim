@@ -104,7 +104,7 @@ vim.keymap.set('n', '<Leader>hc', function()
     vim.opt.colorcolumn:append('' .. col)
 end, { desc = 'Add or remove colorcolumn' })
 
--- keep bar cursor
+-- keep bar cursor {{{
 local saved_guicursor
 
 local function set_cursor_bar()
@@ -127,6 +127,19 @@ vim.api.nvim_create_autocmd("VimResume", {
         end
     end,
 })
+
+-- Cursor: normal-ish => block, insert-ish => bar. Single source of truth for
+-- both the main editor and the Ctrl-G temp editor (CLI agents use $EDITOR).
+vim.opt.guicursor = "n-v-c-sm:block,i-ci-ve:ver30,o:block,r-cr-o:ver30"
+
+vim.api.nvim_create_autocmd({ "ModeChanged", "WinEnter", "BufEnter" }, {
+  callback = function()
+    if vim.bo.buftype ~= "terminal" then
+      vim.cmd("redraw!")              -- re-emits current shape from guicursor
+    end
+  end,
+})
+--- }}}
 
 require('wordcount').setup({
     format = function(c)
@@ -206,6 +219,8 @@ vim.cmd [[
 vim.g.netrw_liststyle = 3
 vim.g.netrw_keepdir = 0
 
+vim.opt.termguicolors = true
+
 vim.g.seditor_table = {}
 
 vim.opt.diffopt:append('linematch:60')
@@ -247,6 +262,7 @@ end
 
 -- <M-h/j/k/l>
 for c in ('hjkl'):gmatch '.' do
+    vim.keymap.set('t', '<M-' .. c .. '>', '<C-\\><C-N><C-w>' .. c)
     vim.keymap.set('n', '<M-' .. c .. '>', '<C-w>' .. c)
 end
 
@@ -428,7 +444,7 @@ vim.api.nvim_create_autocmd(
     {
         pattern = { '*' },
         callback = function()
-            vim.hl.on_yank({ timeout = 1000 })
+            vim.hl.on_yank({ timeout = 500 })
         end,
     })
 
@@ -519,9 +535,13 @@ vim.keymap.set('c', '<C-j>', '<Down>')
 
 -- google search selection
 -- TODO or better https://github.com/lalitmee/browse.nvim
+local function uri_encode(string)
+    local vf = vim.fn
+    return vf.substitute(vf.iconv(string, 'latin1', 'utf-8'),'[^A-Za-z0-9_.~-]','\\="%".printf("%02X",char2nr(submatch(0)))','g')
+end
 vim.keymap.set('v', '<M-g>', function()
     vim.cmd.normal [["zy]]
-    vim.ui.open('https://www.google.com/search?q=' .. tools.uri_encode(vim.fn.eval('@z')))
+    vim.ui.open('https://www.google.com/search?q=' .. uri_encode(vim.fn.eval('@z')))
 end)
 
 -- look up word in dictionary
@@ -605,6 +625,7 @@ vim.keymap.set('n', '<M-i>', '<CMD>Inspect<CR>')
 
 -- Abbreviations {{{
 vim.keymap.set('ca', 'xfn', 'echo expand("%:p")')
+vim.keymap.set('ca', 'xfnc', 'let @+ = expand("%:p")')
 vim.keymap.set('ca', 'ss', function()
     vim.cmd [[bel 10new]]
     vim.wo.scrolloff = 0

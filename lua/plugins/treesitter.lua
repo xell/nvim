@@ -150,7 +150,6 @@ return {
     }, -- }}}
     -- https://github.com/stevearc/aerial.nvim
     { 'stevearc/aerial.nvim', -- {{{
-        enabled = false,
         cond = not vim.g.vscode,
         opts = {},
         -- Optional dependencies
@@ -169,7 +168,8 @@ return {
                 end,
             })
             -- You probably also want to set a keymap to toggle aerial
-            vim.keymap.set('n', '<Leader><Leader>a', '<cmd>AerialToggle!<CR>')
+            vim.keymap.set('n', '<Leader><Leader>a', '<cmd>AerialToggle<CR>')
+            vim.keymap.set('n', '<Leader><Leader>A', '<cmd>AerialToggle!<CR>')
             require('telescope').load_extension('aerial')
             require('telescope').setup({
                 extensions = {

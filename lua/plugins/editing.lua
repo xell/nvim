@@ -1,5 +1,91 @@
 -- vim:
 return {
+
+    -- https://github.com/onewu867/ime-smart.nvim
+    { "onewu867/ime-smart.nvim",
+      enabled = false,
+      opts = {
+        command = "/opt/homebrew/bin/im-select",
+        english_id = "com.apple.keylayout.ABC",
+        comment_id = "com.apple.inputmethod.SCIM.Shuangpin",
+        insert_leave_delay_ms = 30,
+        remember_last_insert = false,
+        contextual_switch = true,
+      },
+    },
+
+    -- https://github.com/chojs23/im-switch.nvim
+    { "chojs23/im-switch.nvim",
+      enabled = true,
+      event = "VeryLazy",
+      build = "make build", -- or "make build-wsl-win" for WSL
+      config = function()
+        require('im-switch').setup({
+          -- Configuration options (see below)
+          -- Path to the binary (auto-detected if not specified)
+          binary_path = 'im-select',
+
+          -- Default input method ID (platform-specific defaults)
+          -- macOS: 'com.apple.keylayout.ABC'
+          -- WSL: 'en-US'
+          -- Linux: 'us' (XKB), 'xkb:us::eng' (IBus), 'keyboard-us' (Fcitx)
+          -- Windows: 'en-US'
+          default_input = 'com.apple.keylayout.ABC', -- Uses platform default
+
+          -- Auto-switch to default input in normal mode (default: true)
+          auto_switch = true,
+
+          -- Turn Caps Lock off while switching to default input (default: true)
+          auto_capslock_off = true,
+
+          -- Enable debug logging (default: false)
+          debug = false,
+        })
+      end,
+    },
+
+    -- https://github.com/keaising/im-select.nvim
+    { "keaising/im-select.nvim",
+        enabled = false,
+        config = function()
+            require('im_select').setup({
+            -- IM will be set to `default_im_select` in `normal` mode
+            -- For Windows/WSL, default: "1033", aka: English US Keyboard
+            -- For macOS, default: "com.apple.keylayout.ABC", aka: US
+            -- For Linux, default:
+            --               "keyboard-us" for Fcitx5
+            --               "1" for Fcitx
+            --               "xkb:us::eng" for ibus
+            -- You can use `im-select` or `fcitx5-remote -n` to get the IM's name
+            default_im_select  = "com.apple.keylayout.ABC",
+
+            -- Can be binary's name, binary's full path, or a table, e.g. 'im-select',
+            -- '/usr/local/bin/im-select' for binary without extra arguments,
+            -- or { "AIMSwitcher.exe", "--imm" } for binary need extra arguments to work.
+            -- For Windows/WSL, default: "im-select.exe"
+            -- For macOS, default: "macism"
+            -- For Linux, default: "fcitx5-remote" or "fcitx-remote" or "ibus"
+            default_command = "macism",
+
+            -- Restore the default input method state when the following events are triggered
+            -- "VimEnter" and "FocusGained" were removed for causing problems, add it by your needs
+            set_default_events = { "InsertLeave", "CmdlineLeave" },
+
+            -- Restore the previous used input method state when the following events
+            -- are triggered, if you don't want to restore previous used im in Insert mode,
+            -- e.g. deprecated `disable_auto_restore = 1`, just let it empty
+            -- as `set_previous_events = {}`
+            set_previous_events = { "InsertEnter" },
+
+            -- Show notification about how to install executable binary when binary missed
+            keep_quiet_on_no_binary = false,
+
+            -- Async run `default_command` to switch IM or not
+            async_switch_im = true
+            })
+        end,
+    },
+
     -- https://github.com/tpope/vim-fugitive
     { 'tpope/vim-fugitive', -- {{{
         cond = not vim.g.vscode,

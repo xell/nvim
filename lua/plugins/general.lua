@@ -12,18 +12,6 @@ return {
         end,
     }, -- }}}
 
-    -- https://github.com/rlue/vim-barbaric
-    { 'rlue/vim-barbaric', -- {{{
-        dev = true,
-        init = function ()
-            vim.g.barbaric_ime = vim.fn.expand('~/.local/bin/macism')
-            vim.g.barbaric_default = 'com.apple.keylayout.ABC'
-            -- The scope where alternate input methods persist (buffer, window, tab, global)
-            vim.g.barbaric_scope = 'buffer'
-            vim.o.ttimeoutlen = 0 -- default 50
-        end
-    }, -- }}}
-
     -- https://github.com/easymotion/vim-easymotion
     -- https://github.com/xell/vim-easymotion
     { 'xell/vim-easymotion', -- {{{

@@ -313,6 +313,69 @@ function M.counts_range(buf, first, last)
     return shape(scan_lines(vim.api.nvim_buf_get_lines(buf, first - 1, last, false)))
 end
 
+-- Extract the lines of a charwise/linewise/blockwise selection, trimmed to
+-- the selected columns where relevant, given (l1,c1)-(l2,c2) already ordered
+-- so that (l1,c1) <= (l2,c2).
+local function selection_lines(buf, mode, l1, c1, l2, c2)
+    local lines = vim.api.nvim_buf_get_lines(buf, l1 - 1, l2, false)
+    if #lines == 0 then return lines end
+    if mode == 'V' then
+        -- linewise: whole lines, nothing to trim
+    elseif mode == '\22' then
+        -- blockwise: same column range on every line
+        local lo, hi = math.min(c1, c2), math.max(c1, c2)
+        for i, l in ipairs(lines) do
+            lines[i] = string.sub(l, lo, hi)
+        end
+    else
+        -- charwise ('v'): trim first/last line to the selected columns
+        if #lines == 1 then
+            lines[1] = string.sub(lines[1], c1, c2)
+        else
+            lines[1] = string.sub(lines[1], c1)
+            lines[#lines] = string.sub(lines[#lines], 1, c2)
+        end
+    end
+    return lines
+end
+
+--- Word counts for the *active* visual selection (mode 'v', 'V' or blockwise).
+--- Returns nil when not currently in a visual mode.
+--- @param buf integer|nil  buffer handle, defaults to the current buffer
+function M.counts_visual(buf)
+    local mode = vim.fn.mode()
+    if mode ~= 'v' and mode ~= 'V' and mode ~= '\22' then return nil end
+    buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+
+    local sp = vim.fn.getpos('v')
+    local ep = vim.fn.getpos('.')
+    local l1, c1, l2, c2 = sp[2], sp[3], ep[2], ep[3]
+    if l1 > l2 or (l1 == l2 and c1 > c2) then
+        l1, c1, l2, c2 = l2, c2, l1, c1
+    end
+
+    return shape(scan_lines(selection_lines(buf, mode, l1, c1, l2, c2)))
+end
+
+--- Word counts for the last visual selection, using the '< '> marks. Useful
+--- from a command line invoked right after leaving visual mode (e.g. a
+--- range-taking user command auto-prefixed with '<,'>).
+--- @param buf integer|nil  buffer handle, defaults to the current buffer
+function M.counts_last_visual(buf)
+    buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
+    local mode = vim.fn.visualmode()
+    if mode == '' then return nil end
+
+    local sp = vim.api.nvim_buf_get_mark(buf, '<')
+    local ep = vim.api.nvim_buf_get_mark(buf, '>')
+    local l1, c1, l2, c2 = sp[1], sp[2] + 1, ep[1], ep[2] + 1
+    if l1 > l2 or (l1 == l2 and c1 > c2) then
+        l1, c1, l2, c2 = l2, c2, l1, c1
+    end
+
+    return shape(scan_lines(selection_lines(buf, mode, l1, c1, l2, c2)))
+end
+
 -- ---------------------------------------------------------------------------
 -- Statusline
 -- ---------------------------------------------------------------------------
@@ -332,7 +395,10 @@ end
 function M.statusline()
     local buf = vim.api.nvim_get_current_buf()
     if not eligible(buf) then return '' end
-    local ok, s = pcall(opts.format, M.counts(buf))
+    -- while a visual selection is active, show its count instead of the
+    -- whole buffer's
+    local c = M.counts_visual(buf) or M.counts(buf)
+    local ok, s = pcall(opts.format, c)
     return ok and s or ''
 end
 
@@ -341,6 +407,58 @@ end
 -- ---------------------------------------------------------------------------
 
 local AUG = 'wordcount'
+local VISUAL_KEY_DESC_PREFIX = 'wordcount: '
+local visual_keys_installed = false
+
+-- ---------------------------------------------------------------------------
+-- Visual-entry keymaps
+--
+-- ModeChanged is the "correct" event for this, but it is asynchronous: in
+-- practice (observed with several plugins loaded, e.g. which-key.nvim /
+-- scrollEOF.nvim also listening on ModeChanged) Neovim can defer firing it
+-- until the *next* key is processed, which reproduces exactly the original
+-- glitch -- the selection count only appears after `l`. Wrapping the keys
+-- that actually enter/switch/leave visual mode guarantees the redraw happens
+-- synchronously, in the same call stack as the keypress, independent of any
+-- event scheduling quirks. `:normal!` replays the key (with any count)
+-- exactly as Vim would have handled it, so behaviour is unchanged; we just
+-- piggy-back a redrawstatus on top.
+-- ---------------------------------------------------------------------------
+
+local VISUAL_ENTRY_KEYS = { 'v', 'V', '<C-v>' }
+
+local function install_visual_keymaps()
+    if visual_keys_installed then return end
+    visual_keys_installed = true
+    for _, key in ipairs(VISUAL_ENTRY_KEYS) do
+        local raw = vim.api.nvim_replace_termcodes(key, true, false, true)
+        -- from Normal mode: enter visual (preserve any count, e.g. `5V`)
+        vim.keymap.set('n', key, function()
+            vim.cmd('silent! normal! ' .. vim.v.count1 .. raw)
+            if M.enabled then pcall(vim.cmd.redrawstatus) end
+        end, { desc = VISUAL_KEY_DESC_PREFIX .. 'enter visual + refresh statusline' })
+        -- from Visual mode: switch submode or toggle back to Normal
+        vim.keymap.set('x', key, function()
+            vim.cmd('silent! normal! ' .. raw)
+            if M.enabled then pcall(vim.cmd.redrawstatus) end
+        end, { desc = VISUAL_KEY_DESC_PREFIX .. 'switch/leave visual + refresh statusline' })
+    end
+    -- leaving visual mode without toggling (Esc) should also refresh right away
+    vim.keymap.set('x', '<Esc>', function()
+        vim.cmd('silent! normal! \27')
+        if M.enabled then pcall(vim.cmd.redrawstatus) end
+    end, { desc = VISUAL_KEY_DESC_PREFIX .. 'leave visual + refresh statusline' })
+end
+
+local function remove_visual_keymaps()
+    if not visual_keys_installed then return end
+    visual_keys_installed = false
+    for _, key in ipairs(VISUAL_ENTRY_KEYS) do
+        pcall(vim.keymap.del, 'n', key)
+        pcall(vim.keymap.del, 'x', key)
+    end
+    pcall(vim.keymap.del, 'x', '<Esc>')
+end
 
 M.enabled = false
 
@@ -364,10 +482,25 @@ function M.enable()
     au({ 'CursorMoved', 'CursorMovedI' }, on_cursor)
     au({ 'BufEnter', 'InsertLeave', 'BufWinEnter' }, rebuild)
 
+    -- Entering/updating/leaving visual mode (e.g. a bare `V`/`v`/<C-v>, or
+    -- extending the selection with an operator-agnostic key) doesn't fire
+    -- CursorMoved by itself, so the statusline would keep showing the stale
+    -- whole-buffer count until some unrelated redraw happened. Force one
+    -- here so the selection count appears immediately.
+    vim.api.nvim_create_autocmd('ModeChanged', {
+        group = grp,
+        pattern = { '*:[vV\22]*', '[vV\22]*:*' },
+        callback = function()
+            if M.enabled then pcall(vim.cmd.redrawstatus) end
+        end,
+    })
+
     vim.api.nvim_create_autocmd({ 'BufDelete', 'BufWipeout' }, {
         group = grp,
         callback = function(a) inc[a.buf] = nil end,
     })
+
+    install_visual_keymaps()
 
     -- prime the buffer we are sitting in
     pcall(rebuild, vim.api.nvim_get_current_buf())
@@ -378,6 +511,7 @@ function M.disable()
     M.enabled = false
     vim.g.wordcount_enabled = false
     pcall(vim.api.nvim_del_augroup_by_name, AUG)
+    remove_visual_keymaps()
     inc = {}
     pcall(vim.cmd.redrawstatus)
 end
@@ -404,8 +538,21 @@ local function create_commands()
 
     vim.api.nvim_create_user_command('WordCount', function(a)
         local c, scope
-        if a.range == 2 then
-            c = M.counts_range(0, a.line1, a.line2)
+        local visual = M.counts_visual(0)
+        if visual then
+            c = visual
+            scope = 'selection'
+        elseif a.range == 2 then
+            -- a range-taking command entered directly from visual mode is
+            -- auto-prefixed with '<,'>: if the range matches those marks,
+            -- prefer the precise (possibly charwise/blockwise) selection
+            -- over the plain linewise range
+            local mstart = vim.api.nvim_buf_get_mark(0, '<')
+            local mend = vim.api.nvim_buf_get_mark(0, '>')
+            if mstart[1] == a.line1 and mend[1] == a.line2 then
+                c = M.counts_last_visual(0)
+            end
+            c = c or M.counts_range(0, a.line1, a.line2)
             scope = string.format('lines %d-%d', a.line1, a.line2)
         else
             c = M.counts(0)
