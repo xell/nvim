@@ -20,7 +20,8 @@ return {
             -- Replaces `ensure_installed`. Async; no-op for parsers already installed.
             ts.install({
                 'javascript', 'html', 'css', 'typescript',
-                'json', 'rust',
+                'json', 'rust', 'lua', 'c', 'diff',
+                'markdown', 'vim', 'vimdoc', 'query',
             })
 
             -- Replaces `highlight.disable` / `indent.disable`.
@@ -208,4 +209,17 @@ return {
             }
         end
     },
+    -- https://github.com/adoyle-h/lsp-toggle.nvim
+    { 'adoyle-h/lsp-toggle.nvim', -- {{{
+        cond = not vim.g.vscode,
+        dependencies = {
+            'neovim/nvim-lspconfig',
+        },
+        config = function ()
+            require('lsp-toggle').setup {
+                create_cmds = true, -- Whether to create user commands
+                telescope = false, -- Whether to load telescope extensions
+            }
+        end,
+    }, -- }}}
 }

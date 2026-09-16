@@ -313,6 +313,14 @@ function M.counts_range(buf, first, last)
     return shape(scan_lines(vim.api.nvim_buf_get_lines(buf, first - 1, last, false)))
 end
 
+--- English-word count for an arbitrary list of strings, not tied to any
+--- buffer. For callers (e.g. ftplugin/markdown.lua's heading word counter)
+--- that need to count text assembled/edited in memory rather than sliced
+--- straight out of a buffer.
+function M.words_in_lines(lines)
+    return scan_lines(lines).w
+end
+
 -- Extract the lines of a charwise/linewise/blockwise selection, trimmed to
 -- the selected columns where relevant, given (l1,c1)-(l2,c2) already ordered
 -- so that (l1,c1) <= (l2,c2).
@@ -417,37 +425,61 @@ local visual_keys_installed = false
 -- practice (observed with several plugins loaded, e.g. which-key.nvim /
 -- scrollEOF.nvim also listening on ModeChanged) Neovim can defer firing it
 -- until the *next* key is processed, which reproduces exactly the original
--- glitch -- the selection count only appears after `l`. Wrapping the keys
--- that actually enter/switch/leave visual mode guarantees the redraw happens
--- synchronously, in the same call stack as the keypress, independent of any
--- event scheduling quirks. `:normal!` replays the key (with any count)
--- exactly as Vim would have handled it, so behaviour is unchanged; we just
--- piggy-back a redrawstatus on top.
+-- glitch -- the selection count only appears after `l`.
+--
+-- These are <expr> mappings: the callback only returns the key itself,
+-- verbatim, and schedules the redraw; it does NOT drive the mode change
+-- itself via a nested `:normal!`. That distinction matters -- an earlier
+-- version called `vim.cmd('silent! normal! ...')`
+-- directly, which executes the key-press (and therefore the mode change, and
+-- any ModeChanged autocmd it triggers) *synchronously inside* this callback's
+-- own stack frame. With which-key.nvim installed (its default triggers cover
+-- Visual/Select/Operator-pending mode, see `triggers = {{'<auto>', mode =
+-- 'nxso'}}`), that nested ModeChanged firing re-entered which-key's own
+-- state machine, which blocks on `getcharstr()` to steal the *next* keystroke
+-- for its own key-tree lookup and only replays it later via `feedkeys(...,
+-- 'mit', ...)`. Since that steal happened underneath our own nested
+-- `:normal!`, whatever the user typed right after v/V/<C-v> (e.g. a motion
+-- extending the selection) could be swallowed and replayed out of order --
+-- intermittently turning a single `V` into a multi-line selection. Returning
+-- the keys from an <expr> mapping instead lets Neovim's normal top-level
+-- input loop process them, exactly as an unmapped keypress would, so we no
+-- longer add our own reentrancy on top of that.
 -- ---------------------------------------------------------------------------
 
 local VISUAL_ENTRY_KEYS = { 'v', 'V', '<C-v>' }
+
+local function schedule_redraw()
+    if not M.enabled then return end
+    vim.schedule(function()
+        if M.enabled then pcall(vim.cmd.redrawstatus) end
+    end)
+end
 
 local function install_visual_keymaps()
     if visual_keys_installed then return end
     visual_keys_installed = true
     for _, key in ipairs(VISUAL_ENTRY_KEYS) do
         local raw = vim.api.nvim_replace_termcodes(key, true, false, true)
-        -- from Normal mode: enter visual (preserve any count, e.g. `5V`)
+        -- from Normal mode: enter visual. Any count typed before the key
+        -- (e.g. `5V`) is still pending and Neovim re-applies it to whatever
+        -- an <expr> mapping returns, so returning the bare key is enough --
+        -- prepending vim.v.count1 here would apply the count twice.
         vim.keymap.set('n', key, function()
-            vim.cmd('silent! normal! ' .. vim.v.count1 .. raw)
-            if M.enabled then pcall(vim.cmd.redrawstatus) end
-        end, { desc = VISUAL_KEY_DESC_PREFIX .. 'enter visual + refresh statusline' })
+            schedule_redraw()
+            return raw
+        end, { expr = true, desc = VISUAL_KEY_DESC_PREFIX .. 'enter visual + refresh statusline' })
         -- from Visual mode: switch submode or toggle back to Normal
         vim.keymap.set('x', key, function()
-            vim.cmd('silent! normal! ' .. raw)
-            if M.enabled then pcall(vim.cmd.redrawstatus) end
-        end, { desc = VISUAL_KEY_DESC_PREFIX .. 'switch/leave visual + refresh statusline' })
+            schedule_redraw()
+            return raw
+        end, { expr = true, desc = VISUAL_KEY_DESC_PREFIX .. 'switch/leave visual + refresh statusline' })
     end
     -- leaving visual mode without toggling (Esc) should also refresh right away
     vim.keymap.set('x', '<Esc>', function()
-        vim.cmd('silent! normal! \27')
-        if M.enabled then pcall(vim.cmd.redrawstatus) end
-    end, { desc = VISUAL_KEY_DESC_PREFIX .. 'leave visual + refresh statusline' })
+        schedule_redraw()
+        return '\27'
+    end, { expr = true, desc = VISUAL_KEY_DESC_PREFIX .. 'leave visual + refresh statusline' })
 end
 
 local function remove_visual_keymaps()

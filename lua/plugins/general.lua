@@ -167,6 +167,7 @@ return {
         event = "VeryLazy",
         dependencies = {
             { "nvim-lua/plenary.nvim", lazy = true },
+            { "folke/snacks.nvim" },
         },
         keys = {
             -- 👇 in this section, choose your own keymappings!
@@ -193,6 +194,7 @@ return {
             open_for_directories = false,
             keymaps = {
                 show_help = "<f1>",
+                cycle_open_buffers = "<c-b>",
             },
         },
     }, -- }}}

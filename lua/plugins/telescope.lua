@@ -118,6 +118,27 @@ return {
                     current_buffer_fuzzy_find = {
 
                     },
+                    -- https://github.com/nvim-telescope/telescope.nvim/issues/2188
+                    buffers = {
+                        mappings = {
+                            i = { ["<CR>"] = actions.select_tab_drop }
+                        },
+                        find_files = {
+                            mappings = {
+                                i = { ["<CR>"] = actions.select_tab_drop }
+                            }
+                        },
+                        git_files = {
+                            mappings = {
+                                i = { ["<CR>"] = actions.select_tab_drop }
+                            }
+                        },
+                        old_files = {
+                            mappings = {
+                                i = { ["<CR>"] = actions.select_tab_drop }
+                            }
+                        },
+                    },
                 },
             }
             vim.cmd[[
@@ -139,7 +160,7 @@ return {
             " https://github.com/nvim-telescope/telescope.nvim/issues/394
             nnoremap <Leader>fv <cmd>Telescope find_files follow=true search_dirs=~/.config/nvim<CR>
             nnoremap <Leader>fV <cmd>Telescope find_files follow=true search_dirs=~/.local/share/nvim/lazy<CR>
-            nnoremap <Leader>fn :Telescope find_files search_dirs=<C-R>=g:xell_notes_root<CR><CR>
+            nnoremap <Leader>fn :Telescope find_files search_dirs=<C-R>=g:pkm_base<CR><CR>
             nnoremap <Leader>fl :Telescope current_buffer_fuzzy_find<CR>
             nnoremap <Leader>fR :Telescope resume<CR>
             " nmap <Leader>fl :BLines<CR>

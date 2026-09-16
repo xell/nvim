@@ -250,6 +250,10 @@ vim.keymap.set('n', '<M-->', '<C-w>-')
 vim.keymap.set('n', '<M-=>', '<C-w>+')
 vim.keymap.set('n', '<M-,>', '<C-w><')
 vim.keymap.set('n', '<M-.>', '<C-w>>')
+vim.keymap.set('t', '<M-->', '<C-\\><C-n><C-w>-')
+vim.keymap.set('t', '<M-=>', '<C-\\><C-n><C-w>+')
+vim.keymap.set('t', '<M-,>', '<C-\\><C-n><C-w><')
+vim.keymap.set('t', '<M-.>', '<C-\\><C-n><C-w>>')
 vim.keymap.set("n", "<down>", ":resize +1<cr>")
 vim.keymap.set("n", "<up>", ":resize -1<cr>")
 vim.keymap.set("n", "<right>", ":vertical resize +1<cr>")
@@ -258,6 +262,7 @@ vim.keymap.set("n", "<left>", ":vertical resize -1<cr>")
 -- <M-n> goes to the n window
 for i = 1, 10 do
     vim.keymap.set('n', '<M-' .. i .. '>', i .. '<c-w><c-w>')
+    vim.keymap.set('t', '<M-' .. i .. '>', i .. '<C-\\><C-N><c-w><c-w>')
 end
 
 -- <M-h/j/k/l>
@@ -305,11 +310,15 @@ vim.keymap.set('n', '<Leader>wl', function() vim.cmd [[botright vertical split]]
 
 -- tab, next and previous
 vim.keymap.set('n', '<M-t>', ':tabnew<CR>')
+vim.keymap.set('t', '<M-t>', '<C-\\><C-o>:tabnew<CR>')
 vim.keymap.set('n', '<M-w>', ':tabclose')
 vim.keymap.set('n', '<M-[>', 'gT')
 vim.keymap.set('n', '<M-]>', 'gt')
+vim.keymap.set('t', '<M-[>', [[<C-\><C-n>gT]])
+vim.keymap.set('t', '<M-]>', [[<C-\><C-n>gt]])
 for i = 1, 9, 1 do
     vim.keymap.set('n', '<C-' .. i .. '>', i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
+    vim.keymap.set('t', '<C-' .. i .. '>', i .. '<C-\\><C-n>gt', { desc = 'Goto ' .. i .. ' tab' })
 end
 -- edit current buf in a new tab
 vim.api.nvim_create_user_command('TabnewEditBuf', function()
@@ -333,7 +342,82 @@ vim.o.foldlevelstart = 99
 vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 
 -- toggle fold
-vim.cmd [[nnoremap <silent> <Space> @=((foldclosed(line('.')) < 0)?'zc':'zo')<CR>]]
+--
+-- foldexpr (e.g. treesitter's markdown query) deliberately flattens the
+-- blank separator line before the next heading/list/etc. to an outer
+-- level, purely so closed siblings stack without a gap. Structurally that
+-- line belongs to the parent; psychologically a human reading top-to-bottom
+-- still considers it part of whatever deeper content just ended, no matter
+-- what foldlevel() says. Toggling by strict foldlevel containment therefore
+-- closes/opens the wrong (much bigger) fold whenever the cursor sits on one
+-- of these flattened lines.
+--
+-- The same query also folds lists, blockquotes etc., not just ATX headings
+-- -- e.g. a list right under a heading gets its own deeper fold. <Space>
+-- should never toggle one of those; it should always resolve to the
+-- nearest heading, treating list/blockquote/etc. folds as transparent.
+--
+-- Fix, in two stateless phases (recomputed fresh every press, so toggling
+-- stays symmetric even when the cursor never moves):
+--   1. Walk backward over the run of lines flattened to the cursor's own
+--      level; if that run is preceded by something deeper, step into it.
+--   2. From there, climb to that fold's true start, and if it isn't an ATX
+--      heading, keep climbing to the parent fold's start until one is.
+
+local function is_heading(text)
+    return text:match('^#+%s') ~= nil
+end
+
+-- First line of the fold containing `lnum`, given `lnum` is already known
+-- to be at foldlevel `level` (walks back while the level stays >= that,
+-- i.e. while still inside the same fold or a nested one).
+local function fold_start_at(lnum, level)
+    local s = lnum
+    while s > 1 and vim.fn.foldlevel(s - 1) >= level do
+        s = s - 1
+    end
+    return s
+end
+
+local function toggle_fold()
+    local lnum = vim.fn.line('.')
+
+    -- Phase 1: attribute a flattened separator line to the deeper content
+    -- that precedes it, if any.
+    local level = vim.fn.foldlevel(lnum)
+    local probe = lnum
+    while probe > 1 and vim.fn.foldlevel(probe - 1) == level do
+        probe = probe - 1
+    end
+    if probe > 1 and vim.fn.foldlevel(probe - 1) > level then
+        probe = probe - 1
+    end
+
+    -- Phase 2: climb past non-heading folds (list, blockquote, ...) to the
+    -- nearest ancestor whose fold actually starts on an ATX heading.
+    local target
+    local p, plevel = probe, vim.fn.foldlevel(probe)
+    while plevel > 0 do
+        local start = fold_start_at(p, plevel)
+        if is_heading(vim.fn.getline(start)) then
+            target = start
+            break
+        end
+        p = start - 1
+        if p < 1 then break end
+        plevel = vim.fn.foldlevel(p)
+    end
+    target = target or probe
+
+    local closed = vim.fn.foldclosed(target)
+    if closed > 0 then
+        vim.cmd(closed .. 'foldopen')
+    else
+        vim.cmd(target .. 'foldclose')
+    end
+end
+
+vim.keymap.set('n', '<Space>', toggle_fold, { silent = true, desc = 'Toggle the nearest heading fold, transparent to gaps/lists/blockquotes' })
 
 vim.keymap.set('n', 'z[', function()
     local current_foldlevel = vim.call('foldlevel', '.')
@@ -360,6 +444,12 @@ vim.opt.iskeyword:append('-') -- mainly for dictionary lookup
 -- clipboard-osc52
 vim.o.clipboard = 'unnamedplus'
 
+
+vim.keymap.set('n', 'j', 'gj', { desc = 'gj' })
+vim.keymap.set('n', 'k', 'gk', { desc = 'gk' })
+vim.cmd[[xnoremap <expr> j mode() =~ 'V\\|' ? 'j' : 'gj']]
+vim.cmd[[xnoremap <expr> k mode() =~ 'V\\|' ? 'k' : 'gk']]
+
 -- Make U opposite to u.
 vim.keymap.set('n', 'U', '<C-r>', { desc = 'Redo' })
 
@@ -368,11 +458,13 @@ vim.keymap.set('v', 'y', 'ygv<Esc>')
 vim.keymap.set('n', 'P', 'gP')
 
 -- select pasted content
-vim.cmd [[nnoremap <expr> g<C-v> '`[' . getregtype()[0] . '`]']]
+vim.cmd [[nnoremap <expr> gp '`[' . getregtype()[0] . '`]']]
+-- vim.keymap.set("n", "gp", "`[v`]", { desc = "Select last pasted text" })
+
 
 -- indent the just pasted content
 vim.keymap.set('n', '<Leader>P=', '`[V`]==', { desc = 'Indent just pasted' })
-vim.keymap.set('n', '<Leader>P', 'p`[V`]==', { desc = 'Paste and indent' })
+vim.keymap.set('n', '<Leader>PP', 'p`[V`]==', { desc = 'Paste and indent' })
 
 -- - to g_ last non-blank char
 vim.keymap.set('', '-', 'g_')
@@ -523,6 +615,29 @@ end, { desc = 'Toggle stopinsert on FocusLost' })
 -- curly quote
 vim.keymap.set('i', "<M-'>", '’')
 
+-- auto enter zsh vi-mode insert mode
+vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+    pattern = "term://*",
+    callback = function()
+        vim.cmd("startinsert")
+    end,
+})
+vim.api.nvim_create_autocmd("TermOpen", {
+    pattern = "term://*",
+    callback = function()
+        -- Deliberately delayed: startinsert here makes Nvim start reflecting the
+        -- terminal's live cursor shape immediately, before the shell has even
+        -- exec'd and sourced its rc file. That means it captures the terminal's
+        -- default block cursor (see :help terminal-cursor-style) before zsh's
+        -- vi-mode plugin has had a chance to send its own DECSCUSR shape escape,
+        -- and the display never catches up. Waiting lets the shell finish
+        -- starting first, so the initial shape is already correct.
+        vim.defer_fn(function()
+            vim.cmd("startinsert")
+        end, 1000)
+    end,
+})
+
 -- }}}
 
 -- Commands {{{
@@ -656,6 +771,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
 -- auto treesitter
 vim.api.nvim_create_autocmd('FileType', {
     callback = function(args)
+        if vim.bo[args.buf].filetype == 'markdown' then return end
         -- only when a parser actually exists for this filetype
         if vim.treesitter.get_parser(args.buf, nil, { error = false }) then
             -- optional: skip very large files, TS parses the whole buffer

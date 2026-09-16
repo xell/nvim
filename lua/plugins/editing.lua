@@ -3,45 +3,45 @@ return {
 
     -- https://github.com/onewu867/ime-smart.nvim
     { "onewu867/ime-smart.nvim",
-      enabled = false,
-      opts = {
-        command = "/opt/homebrew/bin/im-select",
-        english_id = "com.apple.keylayout.ABC",
-        comment_id = "com.apple.inputmethod.SCIM.Shuangpin",
-        insert_leave_delay_ms = 30,
-        remember_last_insert = false,
-        contextual_switch = true,
-      },
+        enabled = false,
+        opts = {
+            command = "/opt/homebrew/bin/im-select",
+            english_id = "com.apple.keylayout.ABC",
+            comment_id = "com.apple.inputmethod.SCIM.Shuangpin",
+            insert_leave_delay_ms = 30,
+            remember_last_insert = false,
+            contextual_switch = true,
+        },
     },
 
     -- https://github.com/chojs23/im-switch.nvim
     { "chojs23/im-switch.nvim",
-      enabled = true,
-      event = "VeryLazy",
-      build = "make build", -- or "make build-wsl-win" for WSL
-      config = function()
-        require('im-switch').setup({
-          -- Configuration options (see below)
-          -- Path to the binary (auto-detected if not specified)
-          binary_path = 'im-select',
+        enabled = true,
+        event = "VeryLazy",
+        build = "make build", -- or "make build-wsl-win" for WSL
+        config = function()
+            require('im-switch').setup({
+                -- Configuration options (see below)
+                -- Path to the binary (auto-detected if not specified)
+                binary_path = 'im-select',
 
-          -- Default input method ID (platform-specific defaults)
-          -- macOS: 'com.apple.keylayout.ABC'
-          -- WSL: 'en-US'
-          -- Linux: 'us' (XKB), 'xkb:us::eng' (IBus), 'keyboard-us' (Fcitx)
-          -- Windows: 'en-US'
-          default_input = 'com.apple.keylayout.ABC', -- Uses platform default
+                -- Default input method ID (platform-specific defaults)
+                -- macOS: 'com.apple.keylayout.ABC'
+                -- WSL: 'en-US'
+                -- Linux: 'us' (XKB), 'xkb:us::eng' (IBus), 'keyboard-us' (Fcitx)
+                -- Windows: 'en-US'
+                default_input = 'com.apple.keylayout.ABC', -- Uses platform default
 
-          -- Auto-switch to default input in normal mode (default: true)
-          auto_switch = true,
+                -- Auto-switch to default input in normal mode (default: true)
+                auto_switch = true,
 
-          -- Turn Caps Lock off while switching to default input (default: true)
-          auto_capslock_off = true,
+                -- Turn Caps Lock off while switching to default input (default: true)
+                auto_capslock_off = true,
 
-          -- Enable debug logging (default: false)
-          debug = false,
-        })
-      end,
+                -- Enable debug logging (default: false)
+                debug = false,
+            })
+        end,
     },
 
     -- https://github.com/keaising/im-select.nvim
@@ -385,6 +385,7 @@ return {
 
     -- https://github.com/meanderingprogrammer/render-markdown.nvim {{{
     { "MeanderingProgrammer/render-markdown.nvim",
+        enabled = false,
         ft = { "markdown" },
         dependencies = {
             "nvim-treesitter/nvim-treesitter",
