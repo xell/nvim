@@ -467,5 +467,35 @@ return {
                 end
             end)
         end,
-    } -- }}}
+    }, -- }}}
+
+    -- https://github.com/tmccombs/ansify.nvim
+    { "tmccombs/ansify.nvim", },
+
+    -- https://github.com/e-sigs/winbuf.nvim
+    -- https://github.com/xell/winbuf.nvim
+    { "e-sigs/winbuf.nvim", -- {{{
+        dev = true,
+        event = "VeryLazy",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        opts = {
+            style = "slant", -- "thin", "thick", "slant", "padded_slant", "slope", "round"
+            -- separator_style = nil,
+            close_icon = "",
+            show_close_icon = false,
+            modified_icon = "●",
+            indicator = {
+                style = "none", -- "bar", "underline", "none"
+            },
+            hide_single = true,
+            show_buffer_ordinal = false,
+        },
+        keys = {
+            { "[b", function() require("winbuf").cycle(-1) end, desc = "Prev buffer" },
+            { "]b", function() require("winbuf").cycle(1) end, desc = "Next buffer" },
+
+            { "<C-w>C", function() require("winbuf").close_buf() end, desc = "Close buffer (window)" },
+            { "<C-S-w>", function() require("winbuf").close_split() end, desc = "Close split" },
+        },
+    }, -- }}}
 }

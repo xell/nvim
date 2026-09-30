@@ -60,11 +60,26 @@ vim.lsp.config('harper-ls', {
     }
 })
 
+vim.lsp.config('jsonls', {
+    cmd = { 'vscode-json-language-server', '--stdio' },
+    filetypes = { 'json', 'jsonc' },
+    init_options = {
+        provideFormatter = true,
+    },
+    settings = {
+        json = {
+            -- Example: Add custom schemas here if desired
+            validate = { enable = true },
+        },
+    },
+})
+
 -- Enable one or more servers
 -- vim.lsp.enable('lua_ls')
 vim.lsp.enable({
     'lua_ls',
     -- 'harper-ls',
+    'jsonls',
 })
 
 vim.diagnostic.config({

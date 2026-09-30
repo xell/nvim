@@ -121,21 +121,21 @@ return {
                     -- https://github.com/nvim-telescope/telescope.nvim/issues/2188
                     buffers = {
                         mappings = {
-                            i = { ["<CR>"] = actions.select_tab_drop }
+                            i = { ["<S-CR>"] = actions.select_tab_drop }
                         },
                         find_files = {
                             mappings = {
-                                i = { ["<CR>"] = actions.select_tab_drop }
+                                i = { ["<S-CR>"] = actions.select_tab_drop }
                             }
                         },
                         git_files = {
                             mappings = {
-                                i = { ["<CR>"] = actions.select_tab_drop }
+                                i = { ["<S-CR>"] = actions.select_tab_drop }
                             }
                         },
                         old_files = {
                             mappings = {
-                                i = { ["<CR>"] = actions.select_tab_drop }
+                                i = { ["<S-CR>"] = actions.select_tab_drop }
                             }
                         },
                     },

@@ -10,6 +10,10 @@
 local function k(keys)
     return vim.api.nvim_replace_termcodes(keys, true, true, true)
 end
+
+-- Start listening on a PID-addressable socket so other instances of this
+-- config can find and RPC into this one (see lua/swap_takeover.lua).
+require('swap_takeover').setup_server()
 -- }}}
 
 -- General settings {{{
@@ -68,8 +72,8 @@ vim.o.ambiwidth = 'single'
 vim.o.listchars = 'tab:▸\\ ,eol:¬'
 vim.opt.fillchars = { --- nvim-spec
     fold = ' ',
-    foldopen = ({ '', '' })[1],
-    foldclose = ({ '', '' })[1],
+    foldopen =  ({ '▾', '', '' })[1],
+    foldclose = ({ '▸', '', '' })[1],
     foldsep = '│',
     diff = '╱',
     eob = ' ',
@@ -236,11 +240,21 @@ vim.api.nvim_create_autocmd('FileType', {
         'query',
         'scratch',
         'spectre_panel',
+        'fugitive',
     },
     callback = function(args)
         vim.keymap.set('n', 'q', '<cmd>quit<cr>', { buffer = args.buf })
     end,
 })
+
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "help",
+  callback = function()
+    -- Move the newly opened help window into a local split of the active window
+    vim.cmd("wincmd K")
+  end,
+})
+
 -- }}}
 
 -- Windows and tab {{{
@@ -335,7 +349,22 @@ vim.keymap.set('n', 'L', '<CMD>bnext<CR>')
 
 -- Fold {{{
 -- vim.o.foldmethod = 'marker'
-vim.o.foldcolumn = 'auto' -- nvim-spec
+-- vim.o.foldcolumn = 'auto' -- nvim-spec
+
+local fcs = vim.opt.fillchars:get()
+
+-- Stolen from Akinsho
+local function get_fold(lnum)
+    if vim.fn.foldlevel(lnum) <= vim.fn.foldlevel(lnum - 1) then return ' ' end
+    return vim.fn.foldclosed(lnum) == -1 and fcs.foldopen or fcs.foldclose
+end
+
+_G.get_statuscol = function()
+    return "%s%l " .. get_fold(vim.v.lnum) .. " "
+end
+
+vim.opt_local.statuscolumn = "%!v:lua.get_statuscol()"
+
 vim.o.foldlevel = 99
 vim.o.foldlevelstart = 99
 -- vim.o.foldopen = 'all'
@@ -589,10 +618,7 @@ vim.keymap.set('v', "<Leader>'", [[<ESC>`>a'<ESC>`<i'<ESC>`>ll]])
 -- https://github.com/vim/vim/blob/master/runtime/pack/dist/opt/editexisting/plugin/editexisting.vim
 -- vim.cmd.runtime('macros/editexisting.vim')
 vim.api.nvim_create_autocmd({ 'SwapExists' }, {
-    callback = function()
-        vim.v.swapchoice = 'o'
-        vim.bo.modifiable = false
-    end,
+    callback = require('swap_takeover').handle_swap_exists,
 })
 
 -- Return to normal mode while losing focus
@@ -615,6 +641,17 @@ end, { desc = 'Toggle stopinsert on FocusLost' })
 -- curly quote
 vim.keymap.set('i', "<M-'>", '’')
 
+-- i_CTRL-u stopps at column 1
+vim.keymap.set('i', '<C-u>', function()
+  if vim.fn.col('.') == 1 then
+    return ''
+  end
+  return vim.api.nvim_replace_termcodes('<C-u>', true, true, true)
+end, { expr = true, noremap = true, silent = true, desc = 'Delete to line start, but no line-eating at col 1' })
+
+-- 
+-- " Prefer Neovim terminal insert mode to normal mode.
+-- autocmd BufEnter term://* startinsert
 -- auto enter zsh vi-mode insert mode
 vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
     pattern = "term://*",
@@ -736,6 +773,32 @@ vim.keymap.set('n', ']l', '<cmd>lnext<cr>zvzz', { desc = 'Next loclist item' })
 
 -- Inspect
 vim.keymap.set('n', '<M-i>', '<CMD>Inspect<CR>')
+
+
+vim.api.nvim_create_user_command("TermRight", function()
+    -- Get the directory of the current buffer; fallback to current working directory if empty
+    local current_buf_dir = vim.fn.expand("%:p:h")
+    if current_buf_dir == "" then
+        current_buf_dir = vim.fn.getcwd()
+    end
+
+    -- Open a vertical terminal split at the far right using the buffer's directory
+    vim.cmd("botright vsplit | lcd " .. vim.fn.fnameescape(current_buf_dir) .. " | terminal")
+end, { desc = "Open a terminal split on the far right in current buffer directory" })
+
+vim.api.nvim_create_user_command("DeleteOtherBuffers", function()
+  local keep = vim.api.nvim_get_current_buf()
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if buf ~= keep
+        and vim.api.nvim_buf_is_valid(buf)
+        and vim.bo[buf].buflisted
+        and not vim.bo[buf].modified then
+      vim.api.nvim_buf_delete(buf, { force = false })
+    end
+  end
+end, {})
+
 -- }}}
 
 -- Abbreviations {{{
@@ -816,3 +879,57 @@ require("lazy").setup({
         notify = false, -- get a notification when changes are found
     },
 })
+
+-- StatusLine / TabLine visibility, and gneovim's AOT window {{{
+-- On/Off/Toggle only flip visibility (laststatus / showtabline); they never
+-- touch how the content itself is built, so the Statusline augroup above
+-- (and Neovim's own default tabline, never overridden here) still drive what
+-- shows once either is back on. Off remembers whatever value was active so
+-- On restores exactly that, instead of assuming a fixed "on" value.
+local laststatus_on = vim.o.laststatus > 0 and vim.o.laststatus or 2
+local showtabline_on = vim.o.showtabline > 0 and vim.o.showtabline or 1
+
+vim.api.nvim_create_user_command('StatusLineOn', function()
+    vim.o.laststatus = laststatus_on
+end, { desc = 'Show the status line' })
+vim.api.nvim_create_user_command('StatusLineOff', function()
+    if vim.o.laststatus > 0 then laststatus_on = vim.o.laststatus end
+    vim.o.laststatus = 0
+end, { desc = 'Hide the status line' })
+vim.api.nvim_create_user_command('StatusLineToggle', function()
+    if vim.o.laststatus > 0 then
+        vim.cmd.StatusLineOff()
+    else
+        vim.cmd.StatusLineOn()
+    end
+end, { desc = 'Toggle the status line' })
+
+vim.api.nvim_create_user_command('TabLineOn', function()
+    vim.o.showtabline = showtabline_on
+end, { desc = 'Show the tab line' })
+vim.api.nvim_create_user_command('TabLineOff', function()
+    if vim.o.showtabline > 0 then showtabline_on = vim.o.showtabline end
+    vim.o.showtabline = 0
+end, { desc = 'Hide the tab line' })
+vim.api.nvim_create_user_command('TabLineToggle', function()
+    if vim.o.showtabline > 0 then
+        vim.cmd.TabLineOff()
+    else
+        vim.cmd.TabLineOn()
+    end
+end, { desc = 'Toggle the tab line' })
+
+-- gneovim's always-on-top window: hide both, this instance only.
+-- g:gneovim_aot_window is not set yet at this point in startup (gneovim sets
+-- it over RPC after init.lua has already run); UIEnter is the first point
+-- it is readable, per gneovim's neovim-api-surface.md.
+vim.api.nvim_create_autocmd('UIEnter', {
+    once = true,
+    callback = function()
+        if vim.g.gneovim_aot_window then
+            vim.cmd.StatusLineOff()
+            vim.cmd.TabLineOff()
+        end
+    end,
+})
+-- }}}

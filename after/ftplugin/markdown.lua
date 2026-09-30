@@ -73,7 +73,7 @@ vks('v', '<Leader>b', [[<ESC>`>a**<ESC>`<i**<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>i', [[<ESC>`>a*<ESC>`<i*<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>c', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
-vks('v', '<Leader>h', [[<ESC>`>a==}<ESC>`<i{==<ESC>`>ll]], { buffer = true })
+vks('v', '<Leader>h', [[<ESC>`>a==<ESC>`<i==<ESC>`>ll]], { buffer = true })
 
 vim.cmd[[
 let s:textbundle_filename = expand('%:r')
@@ -344,4 +344,97 @@ if not vim.b.loaded_md_wordcount then
 
     vim.api.nvim_buf_create_user_command(0, 'MdWordCount', update_heading_counts,
         { desc = 'Update |@N| / |T/A/P%| heading word-count markers' })
+end
+
+-- ---------------------------------------------------------------------------
+-- ==highlight== marks
+--
+-- `==text==` gets the `MdHighlightMark` highlight group on its inner text,
+-- with the `==` delimiters concealed (conceallevel=2, concealcursor='nc',
+-- both set above). This isn't CommonMark/GFM syntax, and tree-sitter's
+-- markdown grammar has no node for `==` -- a query file can only label nodes
+-- the parser already produced, and the parser never produces one for this --
+-- so it's done directly with extmarks (nvim_buf_set_extmark) instead.
+--
+-- Skips fenced code blocks (``` / ~~~), since `==` is an extremely common
+-- comparison operator in real code. Does not special-case inline code spans
+-- (`` `==` ``) -- a stray `==` pair inside inline code on an otherwise plain
+-- line will still be concealed; rare enough not to be worth the extra
+-- parsing for a feature this small.
+-- ---------------------------------------------------------------------------
+
+if not vim.g.vscode then
+    vim.api.nvim_set_hl(0, 'MdHighlightMark', { default = true, link = 'Search' })
+
+    local hl_ns = vim.api.nvim_create_namespace('md_highlight_mark')
+
+    local function opening_fence(line)
+        local marker = line:match('^%s*(```+)') or line:match('^%s*(~~~+)')
+        if marker then return { char = marker:sub(1, 1), len = #marker } end
+        return nil
+    end
+
+    local function is_closing_fence(line, fence)
+        local body = line:match('^%s*(.-)%s*$')
+        if body == '' or body:sub(1, 1) ~= fence.char then return false end
+        return body:match('^%' .. fence.char .. '+$') ~= nil and #body >= fence.len
+    end
+
+    -- Rescans the whole buffer and replaces all `md_highlight_mark` extmarks.
+    -- Content must be non-empty and not itself start/end with `=`, so a
+    -- setext-heading underline (a whole line of `=`) or a run like `===foo===`
+    -- never gets mismatched against the wrong pair of delimiters.
+    local function update_highlight_marks()
+        local buf = vim.api.nvim_get_current_buf()
+        vim.api.nvim_buf_clear_namespace(buf, hl_ns, 0, -1)
+
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local fence = nil
+
+        for lnum, line in ipairs(lines) do
+            if fence then
+                if is_closing_fence(line, fence) then fence = nil end
+            else
+                local of = opening_fence(line)
+                if of then
+                    fence = of
+                else
+                    local row = lnum - 1
+                    local init = 1
+                    while true do
+                        local s, e, content = line:find('==(.-)==', init)
+                        if not s then break end
+                        if content ~= '' and not content:match('^=') and not content:match('=$') then
+                            vim.api.nvim_buf_set_extmark(buf, hl_ns, row, s - 1, {
+                                end_col = s + 1,
+                                conceal = '',
+                            })
+                            vim.api.nvim_buf_set_extmark(buf, hl_ns, row, s + 1, {
+                                end_col = e - 2,
+                                hl_group = 'MdHighlightMark',
+                            })
+                            vim.api.nvim_buf_set_extmark(buf, hl_ns, row, e - 2, {
+                                end_col = e,
+                                conceal = '',
+                            })
+                        end
+                        init = e + 1
+                    end
+                end
+            end
+        end
+    end
+
+    if not vim.b.loaded_md_highlight_mark then
+        vim.b.loaded_md_highlight_mark = true
+
+        vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
+            buffer = 0,
+            group = vim.api.nvim_create_augroup('md_highlight_mark_' .. vim.api.nvim_get_current_buf(), { clear = true }),
+            callback = update_highlight_marks,
+            desc = 'Rescan ==highlight== marks',
+        })
+
+        update_highlight_marks()
+    end
 end

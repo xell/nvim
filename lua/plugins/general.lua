@@ -167,7 +167,7 @@ return {
         event = "VeryLazy",
         dependencies = {
             { "nvim-lua/plenary.nvim", lazy = true },
-            { "folke/snacks.nvim" },
+            { "folke/snacks.nvim", lazy=false, priority=1000 },
         },
         keys = {
             -- 👇 in this section, choose your own keymappings!
@@ -216,7 +216,5 @@ return {
             vim.g.DiffPairVisible = 3
         end
     }, -- }}}
-
-
 
 }
