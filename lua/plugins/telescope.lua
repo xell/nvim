@@ -230,6 +230,11 @@ return {
                 extensions = {
                     heading = {
                         treesitter = true,
+                        -- prompt on top, headings in document order (top to bottom)
+                        picker_opts = {
+                            sorting_strategy = 'ascending',
+                            layout_config = { prompt_position = 'top' },
+                        },
                     },
                 }
             }

@@ -33,7 +33,7 @@ vim.o.updatetime = 500
 vim.o.modelineexpr = true
 
 vim.o.shada = "'100,<1000,s500,h" -- ori viminfo
-vim.o.sessionoptions = 'buffers,curdir,folds,globals,help,resize,slash,tabpages,winpos,winsize,localoptions,options'
+vim.o.sessionoptions = 'buffers,curdir,folds,globals,help,resize,slash,tabpages,winpos,winsize,localoptions,options,terminal'
 
 vim.o.grepprg = 'rg --vimgrep --smart-case'
 
