@@ -7,6 +7,9 @@
 --   * Chinese chars   : CJK ideographs, plus CJK / fullwidth punctuation
 --                       (comma, period, quotes, ellipsis, dash ...)
 --
+-- In markdown buffers, HTML comments (<!-- ... -->, also across lines) are
+-- left out of every number.
+--
 -- Live updates are driven by cursor and text autocmds. They can be turned off
 -- completely (:WordCountOff / :WordCountToggle) which deletes the whole augroup,
 -- so there is zero cost while writing all day with it disabled.
@@ -163,12 +166,66 @@ local function scan(s)
     return { w = w, c = c, hanzi = hanzi, punct = punct }
 end
 
-local function scan_lines(lines)
-    local t = zero()
-    for _, l in ipairs(lines) do
-        add(t, scan(l))
+-- Markdown: text inside <!-- ... --> (possibly spanning lines) never counts.
+-- Each comment span, delimiters included, becomes a single space so the
+-- words on either side aren't spliced together (same rule as the heading
+-- counter in after/ftplugin/markdown.lua). `inside` says whether `s` starts
+-- inside a comment; returns the visible text and whether `s` ends inside one.
+local function strip_comments(s, inside)
+    if not inside and not s:find('<!--', 1, true) then return s, false end
+    local out, pos = {}, 1
+    while true do
+        if inside then
+            local _, e = s:find('-->', pos, true)
+            out[#out + 1] = ' '
+            if not e then return table.concat(out), true end
+            pos, inside = e + 1, false
+        else
+            local b, e = s:find('<!--', pos, true)
+            if not b then
+                out[#out + 1] = s:sub(pos)
+                return table.concat(out), false
+            end
+            out[#out + 1] = s:sub(pos, b - 1)
+            pos, inside = e + 1, true
+        end
     end
-    return t
+end
+
+-- Count one line; `md` turns comment stripping on. Returns the counts and
+-- whether the line ends inside a comment.
+local function scan_line(s, md, inside)
+    if not md then return scan(s), false end
+    local visible, out = strip_comments(s, inside)
+    return scan(visible), out
+end
+
+-- Count lines, starting `inside` a comment or not. When `starts` is given it
+-- is filled with, for every line, whether that line starts inside a comment.
+local function scan_lines(lines, md, inside, starts)
+    local t = zero()
+    inside = inside or false
+    for i, l in ipairs(lines) do
+        if starts then starts[i] = inside end
+        local c
+        c, inside = scan_line(l, md, inside)
+        add(t, c)
+    end
+    return t, inside
+end
+
+local function is_md(buf)
+    return vim.bo[buf].filetype == 'markdown'
+end
+
+-- Whether line `lnum` of `buf` starts inside a comment: a comment-only pass
+-- over the lines above it (plain string.find, no counting).
+local function inside_at(buf, lnum)
+    local inside = false
+    for _, l in ipairs(vim.api.nvim_buf_get_lines(buf, 0, lnum - 1, false)) do
+        _, inside = strip_comments(l, inside)
+    end
+    return inside
 end
 
 local function shape(t)
@@ -188,9 +245,14 @@ end
 --                        cur    = cur_line
 --                        result = total + cur
 -- so a keystroke rescans one line, and moving to another line rescans one line.
+--
+-- Markdown adds `starts` (per line: does it start inside an HTML comment?)
+-- and `cur_out` (does the current line end inside one?). `starts` stays valid
+-- as long as cur_out doesn't change; a keystroke that changes it (typing
+-- `<!--` or `-->`) shifts every line below, so it forces a rebuild.
 -- ---------------------------------------------------------------------------
 
-local inc = {}  -- bufnr -> { total, cur, cur_line, nlines, tick, dirty }
+local inc = {}  -- bufnr -> { total, cur, cur_line, nlines, tick, dirty, md, starts, cur_out }
 
 -- Buffer attachment: TextChangedI can't tell which line changed, and an
 -- edit made from outside Insert mode's own keys (a GUI's nvim_buf_set_text
@@ -239,8 +301,10 @@ local function rebuild(buf)
     if buf == vim.api.nvim_get_current_buf() then
         cl = vim.fn.line('.')
     end
-    local everything = scan_lines(lines)
-    local cur = scan(lines[cl] or '')
+    local md = is_md(buf)
+    local starts = md and {} or nil
+    local everything = scan_lines(lines, md, false, starts)
+    local cur, cur_out = scan_line(lines[cl] or '', md, md and starts[cl] or false)
     local st = {
         total = sub(everything, cur),  -- everything now holds total
         cur = cur,
@@ -248,6 +312,9 @@ local function rebuild(buf)
         nlines = #lines,
         tick = vim.b[buf].changedtick,
         dirty = false,
+        md = md,
+        starts = starts,
+        cur_out = cur_out,
     }
     inc[buf] = st
     attach(buf)
@@ -258,7 +325,7 @@ end
 -- the old and the new current line.
 local function rebase(st, cl)
     add(st.total, st.cur)                     -- fold old current line in
-    st.cur = scan(vim.fn.getline(cl))
+    st.cur, st.cur_out = scan_line(vim.fn.getline(cl), st.md, st.md and st.starts[cl] or false)
     sub(st.total, st.cur)                     -- pull new current line out
     st.cur_line = cl
 end
@@ -289,7 +356,13 @@ local function on_text_insert(buf)
     if cl ~= st.cur_line then
         rebase(st, cl)
     else
-        st.cur = scan(vim.fn.getline(cl))
+        local cur, out = scan_line(vim.fn.getline(cl), st.md, st.md and st.starts[cl] or false)
+        if out ~= st.cur_out then
+            -- a comment opened or closed: every line below may flip
+            rebuild(buf)
+            return
+        end
+        st.cur = cur
     end
     st.tick = vim.b[buf].changedtick
 end
@@ -335,13 +408,15 @@ function M.counts(buf)
         })
     end
     -- no trusted live state: one off full scan
-    return shape(scan_lines(buf_lines(buf)))
+    return shape(scan_lines(buf_lines(buf), is_md(buf)))
 end
 
 --- Word counts for a line range (1-based, inclusive).
 function M.counts_range(buf, first, last)
     buf = (buf == nil or buf == 0) and vim.api.nvim_get_current_buf() or buf
-    return shape(scan_lines(vim.api.nvim_buf_get_lines(buf, first - 1, last, false)))
+    local md = is_md(buf)
+    return shape(scan_lines(vim.api.nvim_buf_get_lines(buf, first - 1, last, false),
+        md, md and inside_at(buf, first)))
 end
 
 --- English-word count for an arbitrary list of strings, not tied to any
@@ -378,6 +453,23 @@ local function selection_lines(buf, mode, l1, c1, l2, c2)
     return lines
 end
 
+-- Counts for a selection, with Markdown comment state carried in from above
+-- the selection (and from the part of its first line before c1, charwise).
+-- Blockwise fragments are chained as if contiguous: approximate if a comment
+-- crosses the block's edges.
+local function selection_counts(buf, mode, l1, c1, l2, c2)
+    local md = is_md(buf)
+    local inside = false
+    if md then
+        inside = inside_at(buf, l1)
+        if mode == 'v' then
+            local first = vim.api.nvim_buf_get_lines(buf, l1 - 1, l1, false)[1] or ''
+            _, inside = strip_comments(first:sub(1, c1 - 1), inside)
+        end
+    end
+    return shape(scan_lines(selection_lines(buf, mode, l1, c1, l2, c2), md, inside))
+end
+
 --- Word counts for the *active* visual selection (mode 'v', 'V' or blockwise).
 --- Returns nil when not currently in a visual mode.
 --- @param buf integer|nil  buffer handle, defaults to the current buffer
@@ -393,7 +485,7 @@ function M.counts_visual(buf)
         l1, c1, l2, c2 = l2, c2, l1, c1
     end
 
-    return shape(scan_lines(selection_lines(buf, mode, l1, c1, l2, c2)))
+    return selection_counts(buf, mode, l1, c1, l2, c2)
 end
 
 --- Word counts for the last visual selection, using the '< '> marks. Useful
@@ -412,7 +504,7 @@ function M.counts_last_visual(buf)
         l1, c1, l2, c2 = l2, c2, l1, c1
     end
 
-    return shape(scan_lines(selection_lines(buf, mode, l1, c1, l2, c2)))
+    return selection_counts(buf, mode, l1, c1, l2, c2)
 end
 
 -- ---------------------------------------------------------------------------
@@ -543,7 +635,7 @@ function M.enable()
     au('TextChangedI', on_text_insert)
     au('TextChanged', on_text_normal)
     au({ 'CursorMoved', 'CursorMovedI' }, on_cursor)
-    au({ 'BufEnter', 'InsertLeave', 'BufWinEnter' }, rebuild)
+    au({ 'BufEnter', 'InsertLeave', 'BufWinEnter', 'FileType' }, rebuild)
 
     -- Entering/updating/leaving visual mode (e.g. a bare `V`/`v`/<C-v>, or
     -- extending the selection with an operator-agnostic key) doesn't fire
