@@ -190,7 +190,35 @@ end
 -- so a keystroke rescans one line, and moving to another line rescans one line.
 -- ---------------------------------------------------------------------------
 
-local inc = {}  -- bufnr -> { total, cur, cur_line, nlines, tick }
+local inc = {}  -- bufnr -> { total, cur, cur_line, nlines, tick, dirty }
+
+-- Buffer attachment: TextChangedI can't tell which line changed, and an
+-- edit made from outside Insert mode's own keys (a GUI's nvim_buf_set_text
+-- for dictation or grammar fixes, a plugin) can touch a line other than the
+-- cursor line. on_lines reports the exact range, so any change that isn't
+-- confined to the current line marks the state dirty and forces a rebuild.
+local attached = {}  -- bufnr -> generation of the live attachment
+local gen = 0        -- bumped on disable, so stale attachments detach
+
+local function attach(buf)
+    if attached[buf] == gen then return end
+    local my_gen = gen
+    local ok = vim.api.nvim_buf_attach(buf, false, {
+        on_lines = function(_, b, _, first, last_old, last_new)
+            if my_gen ~= gen then return true end
+            local st = inc[b]
+            if st and not (first == st.cur_line - 1
+                    and last_old == st.cur_line and last_new == st.cur_line) then
+                st.dirty = true
+            end
+        end,
+        -- :e, :bdelete, autoread ... drop the attachment; reattach next rebuild
+        on_detach = function(_, b)
+            if attached[b] == my_gen then attached[b] = nil end
+        end,
+    })
+    if ok then attached[buf] = my_gen end
+end
 
 local function buf_lines(buf)
     return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -219,8 +247,10 @@ local function rebuild(buf)
         cur_line = cl,
         nlines = #lines,
         tick = vim.b[buf].changedtick,
+        dirty = false,
     }
     inc[buf] = st
+    attach(buf)
     return st
 end
 
@@ -244,13 +274,14 @@ local function wrong_window(buf)
     return false
 end
 
--- TextChangedI: typing. Assume only the current line changed unless the line
--- count moved (Enter, join, multiline paste), in which case fall back.
+-- TextChangedI: typing. Rescan just the current line unless on_lines saw a
+-- change elsewhere or the line count moved (Enter, join, multiline paste),
+-- in which case fall back.
 local function on_text_insert(buf)
     if wrong_window(buf) or too_big(buf) then return end
     local st = inc[buf] or rebuild(buf)
     if not st then return end
-    if vim.fn.line('$') ~= st.nlines then
+    if st.dirty or vim.fn.line('$') ~= st.nlines then
         rebuild(buf)
         return
     end
@@ -276,8 +307,8 @@ local function on_cursor(buf)
     local st = inc[buf]
     if not st then return end
     local cl = vim.fn.line('.')
-    if cl == st.cur_line then return end
-    if vim.fn.line('$') ~= st.nlines then
+    if cl == st.cur_line and not st.dirty then return end
+    if st.dirty or vim.fn.line('$') ~= st.nlines then
         rebuild(buf)
         return
     end
@@ -545,6 +576,8 @@ function M.disable()
     pcall(vim.api.nvim_del_augroup_by_name, AUG)
     remove_visual_keymaps()
     inc = {}
+    attached = {}
+    gen = gen + 1
     pcall(vim.cmd.redrawstatus)
 end
 
