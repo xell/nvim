@@ -498,4 +498,43 @@ return {
             { "<C-S-w>", function() require("winbuf").close_split() end, desc = "Close split" },
         },
     }, -- }}}
+
+    -- https://github.com/jalvesaq/zotcite
+    { "jalvesaq/zotcite",
+        dev = true,
+        dependencies = {
+            "nvim-treesitter/nvim-treesitter",
+            "nvim-telescope/telescope.nvim",
+        },
+        config = function ()
+            require("zotcite").setup({
+                -- your options here (see doc/zotcite.txt)
+                zotero_sqlite_path = '/Users/xell/Resources/Publications/Zotero/zotero.sqlite',
+                open_in_zotero = true,
+                seek_author_width = 25,
+                -- If you'd prefer the prompt at the top,
+                -- change it to
+                -- `{ layout_strategy = 'vertical',
+                -- layout_config = { prompt_position = 'top' },
+                -- sorting_strategy = 'ascending' }`.
+                seek_telescope_opts = {
+                    layout_strategy = 'vertical',
+                    -- layout_config = { prompt_position = 'top' },
+                    -- sorting_strategy = 'ascending',
+                },
+                -- ---
+                -- bibliography: refs.bib
+                -- ---
+                update_bib = false,
+                key_type = "better-bibtex",
+                hook = {
+                    -- add a Zotero deep link to every generated bib entry
+                    bib_ref = function(e)
+                        e["zotero-url"] = "zotero://select/library/items/" .. e.zotkey
+                        return e
+                    end,
+                },
+            })
+        end
+    },
 }
