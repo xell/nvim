@@ -145,6 +145,8 @@ vim.api.nvim_create_autocmd({ "ModeChanged", "WinEnter", "BufEnter" }, {
 })
 --- }}}
 
+require('gitstatus')  -- registers its BufReadPost/BufWritePost refresh
+
 require('wordcount').setup({
     format = function(c)
         return string.format(' zh:%d en:%dw/%dc ', c.cjk, c.words, c.chars)
@@ -179,10 +181,13 @@ StatuslineActive = function()
         -- ' %<%f %h%y%m%r ',
         vim.opt.fileformat:get() == 'unix' and '' or '[' .. vim.opt.fileformat:get() .. '] ',
         vim.opt.fileencoding:get() == 'utf-8' and '' or '[' .. vim.opt.fileencoding:get() .. '] ',
-        vim.fn.exists('*FugitiveStatusline') == 0 and '' or (function()
-            local fs = vim.fn['fugitive#statusline']()
+        -- `+` staged changes
+        -- `*` unstaged changes
+        -- `%` untracked
+        -- `!` merge conflict
+        (function()
+            local fs = require('gitstatus').get()
             if fs ~= '' then
-                fs = string.sub(fs, 6, -3)
                 return '  ' .. fs .. ' '
             else
                 return ''
