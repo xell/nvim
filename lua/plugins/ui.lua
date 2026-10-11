@@ -8,8 +8,9 @@ return {
     -- https://github.com/f-person/auto-dark-mode.nvim
     { 'f-person/auto-dark-mode.nvim', -- {{{
         cond = not vim.g.vscode,
+        enabled = false,
         opts = {
-            update_interval = 1000,
+            update_interval = 1000000,
             set_dark_mode = function()
                 vim.o.background = 'dark'
                 -- vim.cmd('colorscheme onehalfdark')

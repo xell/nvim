@@ -16,7 +16,9 @@ return {
 
     -- https://github.com/chojs23/im-switch.nvim
     { "chojs23/im-switch.nvim",
-        enabled = true,
+        -- not g:gneovim: gneovim sets it only after init.lua has run, so it is
+        -- still nil here. gneovim always starts nvim with --embed.
+        enabled = not vim.tbl_contains(vim.v.argv, "--embed"),
         event = "VeryLazy",
         build = "make build", -- or "make build-wsl-win" for WSL
         config = function()
@@ -380,6 +382,7 @@ return {
         cond = not vim.g.vscode,
         init = function()
             vim.g.matchup_matchparen_offscreen = { method = 'popup' }
+            vim.g.matchup_matchparen_deferred = 1
         end,
     }, -- }}}
 

@@ -75,6 +75,38 @@ vks('v', '<Leader>t', [[<ESC>`>a}<ESC>`<i{=<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>c', [[<ESC>`>a`<ESC>`<i`<ESC>`>ll]], { buffer = true })
 vks('v', '<Leader>h', [[<ESC>`>a==<ESC>`<i==<ESC>`>ll]], { buffer = true })
 
+-- Pair <> for <url> autolinks (and <tags>) only once the character typed right
+-- after < is a letter, so a less-than sign (a < b, <=, <-) is left alone. When
+-- a pair is open, typing > steps over the closing > instead of doubling it.
+-- Typing <> literally leaves the cursor between the two.
+local autolink_group = vim.api.nvim_create_augroup('markdown_autolink_pair', { clear = false })
+vim.api.nvim_clear_autocmds({ group = autolink_group, buffer = 0 })
+local lt_pos -- {row, col} right after a just-typed <
+vim.api.nvim_create_autocmd('InsertCharPre', {
+    group = autolink_group,
+    buffer = 0,
+    callback = function()
+        local char = vim.v.char
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        local line = vim.api.nvim_get_current_line()
+        local after_lt = lt_pos and lt_pos[1] == row and lt_pos[2] == col
+        lt_pos = nil
+        if char == '<' then
+            lt_pos = { row, col + 1 }
+        elseif after_lt and char:match('%a') then
+            vim.v.char = char .. '>'
+            vim.api.nvim_feedkeys(vim.keycode('<C-g>U<Left>'), 'ni', false)
+        elseif after_lt and char == '>' then
+            -- a literal <> puts the cursor between the two
+            vim.api.nvim_feedkeys(vim.keycode('<C-g>U<Left>'), 'ni', false)
+        elseif char == '>' and line:sub(col + 1, col + 1) == '>'
+            and line:sub(1, col):match('<[^<>%s]*$') then
+            vim.v.char = ''
+            vim.api.nvim_feedkeys(vim.keycode('<C-g>U<Right>'), 'ni', false)
+        end
+    end,
+})
+
 vim.cmd[[
 let s:textbundle_filename = expand('%:r')
 
@@ -114,7 +146,6 @@ function! s:export_textbundle()
     " echohl None
 endfunction
 ]]
-
 
 vim.keymap.set('n', 'zM', function()
   -- Execute the default zM to close all folds

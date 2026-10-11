@@ -50,6 +50,7 @@ vim.keymap.set('i', '<M-space>', '<C-x><C-k>')
 -- UI GUI {{{
 vim.o.title = true
 vim.o.guifont = "Sarasa Term SC Nerd:h14"
+vim.o.guifontwide = "Sarasa Term SC Nerd:h14"
 vim.o.number = true
 vim.o.breakindent = true
 vim.o.breakindentopt = 'list:-2'
@@ -79,6 +80,27 @@ vim.opt.fillchars = { --- nvim-spec
     eob = ' ',
     vert = '│',
 }
+
+-- colorscheme auto dark
+local function apply_colorscheme()
+    vim.cmd.colorscheme(vim.o.background == 'dark' and 'ayu-mirage' or 'onehalflight')
+    -- onehalflight.vim runs `set background=light`; re-set it from Lua so Neovim
+    -- keeps following the terminal's theme reports
+    vim.o.background = vim.o.background
+end
+-- wait for lazy.nvim, which provides ayu
+vim.api.nvim_create_autocmd('VimEnter', { once = true, callback = apply_colorscheme })
+vim.api.nvim_create_autocmd('OptionSet', {
+    pattern = 'background',
+    callback = apply_colorscheme,
+})
+-- Nvim only asks the terminal for its background colour at startup; ask again
+-- on focus so a system appearance change (Ghostty follows it) updates 'background'
+vim.api.nvim_create_autocmd('FocusGained', {
+    callback = function()
+        vim.api.nvim_ui_send('\027]11;?\007')
+    end,
+})
 
 -- reload current colorscheme
 vim.api.nvim_create_user_command('ReloadColorscheme', function()
@@ -350,6 +372,76 @@ vim.keymap.set('n', '<C-Enter>', vim.cmd.WinFullScreen)
 -- previous and next buffer
 vim.keymap.set('n', 'H', '<CMD>bprevious<CR>')
 vim.keymap.set('n', 'L', '<CMD>bnext<CR>')
+
+-- Merge other windows' buffers into the current
+-- WinBuffers
+-- OnlyKeep {{{
+local function get(win)
+    return vim.w[win].win_buffers or {}
+end
+
+local function record(win, buf)
+    if not vim.api.nvim_buf_is_valid(buf)
+        or not vim.bo[buf].buflisted
+        or vim.bo[buf].buftype ~= "" then
+        return
+    end
+    -- most-recent first, deduped, dead buffers pruned
+    local list = vim.tbl_filter(function(b)
+        return b ~= buf and vim.api.nvim_buf_is_valid(b)
+    end, get(win))
+    table.insert(list, 1, buf)
+    vim.w[win].win_buffers = list  -- must reassign; vim.w returns a copy
+end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "WinEnter" }, {
+    group = vim.api.nvim_create_augroup("WinBufferHistory", { clear = true }),
+    callback = function()
+        record(vim.api.nvim_get_current_win(), vim.api.nvim_get_current_buf())
+    end,
+})
+
+-- Picker limited to buffers this window has shown
+vim.api.nvim_create_user_command("WinBuffers", function()
+    local bufs = vim.tbl_filter(vim.api.nvim_buf_is_valid, get(0))
+    if #bufs == 0 then
+        return vim.notify("This window has no buffer history", vim.log.levels.INFO)
+    end
+    vim.ui.select(bufs, {
+        prompt = "Window buffers",
+        format_item = function(b)
+            local name = vim.api.nvim_buf_get_name(b)
+            return b .. ": " .. (name ~= "" and vim.fn.fnamemodify(name, ":~:.") or "[No Name]")
+        end,
+    }, function(choice)
+            if choice then vim.api.nvim_set_current_buf(choice) end
+        end)
+end, { desc = "Pick from buffers this window has displayed" })
+
+-- Your original request: merge other windows' lists into the current one, then close them
+vim.api.nvim_create_user_command("OnlyKeep", function()
+    local cur = vim.api.nvim_get_current_win()
+    local merged, seen = {}, {}
+
+    local function add(b)
+        if not seen[b] and vim.api.nvim_buf_is_valid(b) then
+            seen[b] = true
+            table.insert(merged, b)
+        end
+    end
+
+    for _, b in ipairs(get(cur)) do add(b) end
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if win ~= cur then
+            for _, b in ipairs(get(win)) do add(b) end
+        end
+    end
+
+    vim.w[cur].win_buffers = merged
+    vim.cmd("only!")
+end, { desc = "Close other windows in this tab, merging their buffer histories into this one" })
+-- }}}
+
 --- }}}
 
 -- Fold {{{
@@ -680,6 +772,22 @@ vim.api.nvim_create_autocmd("TermOpen", {
     end,
 })
 
+-- Copy a gneovim:// link to the current file to the system clipboard.
+vim.api.nvim_create_user_command('GneovimCopyLink', function()
+    local path = vim.api.nvim_buf_get_name(0)
+    if path == '' then
+        vim.notify('GneovimCopyLink: buffer has no file name', vim.log.levels.WARN)
+        return
+    end
+    path = vim.fn.fnamemodify(path, ':p')
+    -- Percent-encode every byte except unreserved characters and '/'.
+    local url = 'gneovim://file' .. (path:gsub('[^A-Za-z0-9._~/-]', function(c)
+        return string.format('%%%02X', c:byte())
+    end))
+    vim.fn.setreg('+', url)
+    vim.notify('Copied ' .. url)
+end, { desc = 'Copy a gneovim:// link to the current file' })
+
 -- }}}
 
 -- Commands {{{
@@ -716,6 +824,50 @@ local function move_cursor_to_link(backward)
 end
 vim.keymap.set('n', 'g[', function() move_cursor_to_link('b') end, { desc = 'Goto previous link' })
 vim.keymap.set('n', 'g]', function() move_cursor_to_link('') end, { desc = 'Goto next link' })
+
+-- yank the url under the cursor, either a bare url or the target of a markdown link
+local function url_at_cursor()
+    local line = vim.api.nvim_get_current_line()
+    local col = vim.fn.col('.') - 1
+    local start = 0
+    while true do
+        local m = vim.fn.matchstrpos(line, vim.g.link_pattern, start)
+        local text, s, e = m[1], m[2], m[3]
+        if s == -1 or s > col then return nil end
+        if col < e then
+            -- for [linktext](url "title"), only look for the url after ](
+            local target = text:sub(1, 1) == '[' and vim.fn.matchstr(text, [[\](\zs.*]]) or text
+            local url = vim.fn.matchstr(target, vim.g.url_pattern)
+            return url ~= '' and url or nil
+        end
+        start = e
+    end
+end
+vim.keymap.set('n', '<Leader>y', function()
+    local url = url_at_cursor()
+    if not url then
+        vim.notify('No url under cursor', vim.log.levels.WARN)
+        return
+    end
+    vim.fn.setreg('+', url)
+    vim.notify('Copied ' .. url)
+end, { desc = 'Copy url under cursor' })
+
+-- like gx, but open the url in Google Chrome instead of the default browser
+vim.keymap.set('n', 'gX', function()
+    local url = url_at_cursor() or vim.ui._get_urls()[1]
+    if not url or url == '' then
+        vim.notify('No url under cursor', vim.log.levels.WARN)
+        return
+    end
+    vim.system({ 'open', '-a', 'Google Chrome', url }, {}, function(out)
+        if out.code ~= 0 then
+            vim.schedule(function()
+                vim.notify('gX: ' .. vim.trim(out.stderr), vim.log.levels.ERROR)
+            end)
+        end
+    end)
+end, { desc = 'Open url under cursor in Google Chrome' })
 
 -- diffthis
 vim.api.nvim_create_user_command('Diffthis', function()
@@ -885,7 +1037,7 @@ require("lazy").setup({
     },
 })
 
--- StatusLine / TabLine visibility, and gneovim's AOT window {{{
+-- StatusLine / TabLine / WinBar visibility, and gneovim's AOT window {{{
 -- On/Off/Toggle only flip visibility (laststatus / showtabline); they never
 -- touch how the content itself is built, so the Statusline augroup above
 -- (and Neovim's own default tabline, never overridden here) still drive what
@@ -893,6 +1045,15 @@ require("lazy").setup({
 -- On restores exactly that, instead of assuming a fixed "on" value.
 local laststatus_on = vim.o.laststatus > 0 and vim.o.laststatus or 2
 local showtabline_on = vim.o.showtabline > 0 and vim.o.showtabline or 1
+-- 'winbar' has no separate visibility switch: an empty value is "off", so
+-- WinBarOff remembers the content itself and WinBarOn puts it back. It is
+-- also global-local: with a bang the commands cover the global value and
+-- every window's own value (like the status line, everything at once);
+-- without, only the current window's own value. A window cannot hide a
+-- winbar it gets from the global value: an empty local value falls back to
+-- the global one, and any non-empty one still takes up a row.
+local winbar_global_on = vim.go.winbar
+local winbar_locals_on = {} -- win -> local value, saved by WinBarOff!
 
 vim.api.nvim_create_user_command('StatusLineOn', function()
     vim.o.laststatus = laststatus_on
@@ -923,6 +1084,76 @@ vim.api.nvim_create_user_command('TabLineToggle', function()
         vim.cmd.TabLineOn()
     end
 end, { desc = 'Toggle the tab line' })
+
+local function winbar_local(win)
+    return vim.api.nvim_get_option_value('winbar', { win = win, scope = 'local' })
+end
+local function set_winbar_local(win, value)
+    vim.api.nvim_set_option_value('winbar', value, { win = win, scope = 'local' })
+end
+
+local function winbar_on(bang)
+    if bang then
+        vim.go.winbar = winbar_global_on
+        for win, value in pairs(winbar_locals_on) do
+            if vim.api.nvim_win_is_valid(win) then set_winbar_local(win, value) end
+        end
+        winbar_locals_on = {}
+    end
+    -- A window's own WinBarOff is undone by its WinBarOn, and by WinBarOn!.
+    for _, win in ipairs(bang and vim.api.nvim_list_wins() or { vim.api.nvim_get_current_win() }) do
+        local value = vim.w[win].winbar_off
+        if value then
+            set_winbar_local(win, value)
+            vim.w[win].winbar_off = nil
+        end
+    end
+end
+
+local function winbar_off(bang)
+    if bang then
+        if vim.go.winbar ~= '' then winbar_global_on = vim.go.winbar end
+        vim.go.winbar = ''
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+            local value = winbar_local(win)
+            if value ~= '' then
+                winbar_locals_on[win] = value
+                set_winbar_local(win, '')
+            end
+        end
+        return
+    end
+    if vim.go.winbar ~= '' then
+        vim.notify('WinBarOff: a global winbar is set, which one window cannot hide; use :WinBarOff! to hide it everywhere')
+        return
+    end
+    local value = winbar_local(0)
+    if value ~= '' then
+        vim.w.winbar_off = value
+        set_winbar_local(0, '')
+    end
+end
+
+local function winbar_shown(bang)
+    for _, win in ipairs(bang and vim.api.nvim_list_wins() or { vim.api.nvim_get_current_win() }) do
+        if vim.api.nvim_get_option_value('winbar', { win = win }) ~= '' then return true end
+    end
+    return false
+end
+
+vim.api.nvim_create_user_command('WinBarOn', function(opts)
+    winbar_on(opts.bang)
+end, { bang = true, desc = 'Show the window bar (bang: in every window)' })
+vim.api.nvim_create_user_command('WinBarOff', function(opts)
+    winbar_off(opts.bang)
+end, { bang = true, desc = 'Hide the window bar (bang: in every window)' })
+vim.api.nvim_create_user_command('WinBarToggle', function(opts)
+    if winbar_shown(opts.bang) then
+        winbar_off(opts.bang)
+    else
+        winbar_on(opts.bang)
+    end
+end, { bang = true, desc = 'Toggle the window bar (bang: in every window)' })
 
 -- gneovim's always-on-top window: hide both, this instance only.
 -- g:gneovim_aot_window is not set yet at this point in startup (gneovim sets

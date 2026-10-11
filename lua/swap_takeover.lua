@@ -163,6 +163,8 @@ function M.remote_release(fname, taker_pid)
 end
 
 function M.handle_swap_exists()
+    -- gneovim answers this itself for gneovim:// URL / CLI shim opens.
+    if vim.g.gneovim_swap_policy then return end
     local swapname = vim.v.swapname
     local info = vim.fn.swapinfo(swapname)
     local target_file = canonical(vim.fn.expand('<afile>:p'))
