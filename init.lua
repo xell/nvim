@@ -89,9 +89,10 @@ local function apply_colorscheme()
     vim.o.background = vim.o.background
 end
 -- wait for lazy.nvim, which provides ayu
-vim.api.nvim_create_autocmd('VimEnter', { once = true, callback = apply_colorscheme })
+vim.api.nvim_create_autocmd('VimEnter', { once = true, nested = true, callback = apply_colorscheme })
 vim.api.nvim_create_autocmd('OptionSet', {
     pattern = 'background',
+    nested = true,
     callback = apply_colorscheme,
 })
 -- Nvim only asks the terminal for its background colour at startup; ask again
@@ -301,9 +302,9 @@ vim.keymap.set("n", "<right>", ":vertical resize +1<cr>")
 vim.keymap.set("n", "<left>", ":vertical resize -1<cr>")
 
 -- <M-n> goes to the n window
-for i = 1, 10 do
+for i = 1, 9 do
     vim.keymap.set('n', '<M-' .. i .. '>', i .. '<c-w><c-w>')
-    vim.keymap.set('t', '<M-' .. i .. '>', i .. '<C-\\><C-N><c-w><c-w>')
+    vim.keymap.set('t', '<M-' .. i .. '>', '<C-\\><C-N>' .. i .. '<c-w><c-w>')
 end
 
 -- <M-h/j/k/l>
@@ -359,7 +360,7 @@ vim.keymap.set('t', '<M-[>', [[<C-\><C-n>gT]])
 vim.keymap.set('t', '<M-]>', [[<C-\><C-n>gt]])
 for i = 1, 9, 1 do
     vim.keymap.set('n', '<C-' .. i .. '>', i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
-    vim.keymap.set('t', '<C-' .. i .. '>', i .. '<C-\\><C-n>gt', { desc = 'Goto ' .. i .. ' tab' })
+    vim.keymap.set('t', '<C-' .. i .. '>', '<C-\\><C-n>' .. i .. 'gt', { desc = 'Goto ' .. i .. ' tab' })
 end
 -- edit current buf in a new tab
 vim.api.nvim_create_user_command('TabnewEditBuf', function()
@@ -609,7 +610,28 @@ vim.keymap.set('i', '<M-->', '<PageDown>')
 vim.keymap.set('i', '<M-=>', '<PageUp>')
 
 -- "reload" buffer
-vim.keymap.set('n', '<M-e>', '<cmd>e %<CR>')
+vim.api.nvim_create_user_command("ReloadBuffer", function()
+    local win = vim.api.nvim_get_current_win()
+    local lnum = vim.fn.line(".")
+
+    vim.cmd("mkview 9")
+    vim.cmd("edit")
+
+    local tries = 0
+    local function restore()
+        if not vim.api.nvim_win_is_valid(win) then return end
+        vim.api.nvim_win_call(win, function()
+            tries = tries + 1
+            if vim.fn.foldlevel(lnum) > 0 or tries >= 40 then
+                vim.cmd("silent! loadview 9")
+            else
+                vim.defer_fn(restore, 25)
+            end
+        end)
+    end
+    restore()
+end, {})
+vim.keymap.set('n', '<M-e>', '<cmd>ReloadBuffer<CR>')
 -- "reload" filetype, hack for highlight and folding
 vim.keymap.set('n', '<M-C-l>', function()
     vim.t.lbr = vim.wo.linebreak
@@ -787,6 +809,13 @@ vim.api.nvim_create_user_command('GneovimCopyLink', function()
     vim.fn.setreg('+', url)
     vim.notify('Copied ' .. url)
 end, { desc = 'Copy a gneovim:// link to the current file' })
+
+-- Auto read/load buffer after modified externally
+vim.api.nvim_create_autocmd({ 'WinEnter', 'BufEnter', 'TermLeave' }, {
+    callback = function()
+        if vim.fn.getcmdwintype() == '' then vim.cmd('checktime') end
+    end,
+})
 
 -- }}}
 
