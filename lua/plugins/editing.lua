@@ -513,6 +513,8 @@ return {
         config = function ()
             require("zotcite").setup({
                 -- your options here (see doc/zotcite.txt)
+                -- start only with `:Zotcite`; `:Zotcite stop` turns it off
+                autostart = false,
                 zotero_sqlite_path = '/Users/xell/Resources/Publications/Zotero/zotero.sqlite',
                 open_in_zotero = true,
                 seek_author_width = 25,
