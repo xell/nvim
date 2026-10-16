@@ -160,7 +160,10 @@ return {
         },
         config = function()
             require('aerial').setup({
-                backends = { 'treesitter', 'lsp', 'markdown', 'man' },
+                -- don't attach to buffers until an Aerial command is run
+                -- (on_attach would otherwise turn lazy loading off)
+                lazy_load = true,
+                backends ={ 'treesitter', 'lsp', 'markdown', 'man' },
                 -- optionally use on_attach to set keymaps when aerial has attached to a buffer
                 on_attach = function(bufnr)
                     -- Jump forwards/backwards with '{' and '}'
