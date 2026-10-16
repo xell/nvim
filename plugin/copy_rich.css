@@ -1,0 +1,16 @@
+/* Styles for :MarkdownCopyRich (copy_rich.lua), reread on every copy.
+ *
+ * Each rule is inlined into the style attribute of every element with that
+ * tag name, so only plain tag selectors work: `td`, or a list like
+ * `th, td`. Classes, ids, descendant selectors and @rules are ignored.
+ * Giving th or td a border also adds border="1" to the table, for editors
+ * that only read that attribute. */
+
+table {
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid;
+  padding: 2px 6px;
+}
