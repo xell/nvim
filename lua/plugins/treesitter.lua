@@ -163,6 +163,8 @@ return {
                 -- don't attach to buffers until an Aerial command is run
                 -- (on_attach would otherwise turn lazy loading off)
                 lazy_load = true,
+                -- also refresh while typing (after a 300 ms pause), not only on <Esc>
+                update_events = 'TextChanged,InsertLeave,TextChangedI',
                 backends ={ 'treesitter', 'lsp', 'markdown', 'man' },
                 -- optionally use on_attach to set keymaps when aerial has attached to a buffer
                 on_attach = function(bufnr)
