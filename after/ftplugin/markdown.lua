@@ -415,8 +415,8 @@ if not vim.g.vscode then
     -- Content must be non-empty and not itself start/end with `=`, so a
     -- setext-heading underline (a whole line of `=`) or a run like `===foo===`
     -- never gets mismatched against the wrong pair of delimiters.
-    local function update_highlight_marks()
-        local buf = vim.api.nvim_get_current_buf()
+    local function update_highlight_marks(buf)
+        if not vim.api.nvim_buf_is_valid(buf) then return end
         vim.api.nvim_buf_clear_namespace(buf, hl_ns, 0, -1)
 
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -459,13 +459,32 @@ if not vim.g.vscode then
     if not vim.b.loaded_md_highlight_mark then
         vim.b.loaded_md_highlight_mark = true
 
+        local buf = vim.api.nvim_get_current_buf()
+        local group = vim.api.nvim_create_augroup('md_highlight_mark_' .. buf, { clear = true })
+        -- While typing, rescan once after a pause instead of on every keystroke
+        local timer = assert(vim.uv.new_timer())
+        local rescan_later = vim.schedule_wrap(function() update_highlight_marks(buf) end)
+
         vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI', 'InsertLeave' }, {
-            buffer = 0,
-            group = vim.api.nvim_create_augroup('md_highlight_mark_' .. vim.api.nvim_get_current_buf(), { clear = true }),
-            callback = update_highlight_marks,
+            buffer = buf,
+            group = group,
+            callback = function(ev)
+                timer:stop()
+                if ev.event == 'TextChangedI' then
+                    timer:start(150, 0, rescan_later)
+                else
+                    update_highlight_marks(buf)
+                end
+            end,
             desc = 'Rescan ==highlight== marks',
         })
+        vim.api.nvim_create_autocmd('BufWipeout', {
+            buffer = buf,
+            group = group,
+            once = true,
+            callback = function() timer:close() end,
+        })
 
-        update_highlight_marks()
+        update_highlight_marks(buf)
     end
 end
