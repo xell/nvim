@@ -811,9 +811,162 @@ vim.api.nvim_create_user_command('GneovimCopyLink', function()
 end, { desc = 'Copy a gneovim:// link to the current file' })
 
 -- Auto read/load buffer after modified externally
-vim.api.nvim_create_autocmd({ 'WinEnter', 'BufEnter', 'TermLeave' }, {
+--
+-- A reload throws away which folds were open and recomputes them all from
+-- 'foldlevel' alone -- and zM leaves that at 0, so the whole file comes back
+-- folded, with the cursor pulled up to the start of the fold it is now
+-- hidden in. So right before checking, snapshot the closed folds and the
+-- cursor of every window whose file has changed on disk, and put them back
+-- once the reloaded folds exist. Lines are found again by their text, since
+-- the external edit may have moved them; a fold whose first line was edited
+-- or deleted just stays open.
+
+local fold_snapshots = {} -- [winid] = state taken right before a reload
+
+local function disk_mtime(buf)
+    local st = vim.uv.fs_stat(vim.api.nvim_buf_get_name(buf))
+    return st and st.mtime.sec .. '.' .. st.mtime.nsec
+end
+
+-- text -> every lnum holding exactly that text, in order
+local function line_index(lines)
+    local index = {}
+    for lnum, text in ipairs(lines) do
+        index[text] = index[text] or {}
+        table.insert(index[text], lnum)
+    end
+    return index
+end
+
+-- A line, remembered as the nth of the `total` lines with its text.
+local function line_anchor(lines, index, lnum)
+    local same = index[lines[lnum]]
+    for nth, l in ipairs(same) do
+        if l == lnum then
+            return { text = lines[lnum], nth = nth, total = #same, lnum = lnum }
+        end
+    end
+end
+
+-- Same occurrence if the text occurs as often as before, otherwise the
+-- occurrence nearest to where the line used to be.
+local function find_anchor(index, anchor)
+    local same = index[anchor.text]
+    if not same then return nil end
+    if #same == anchor.total then return same[anchor.nth] end
+    local best = same[1]
+    for _, l in ipairs(same) do
+        if math.abs(l - anchor.lnum) < math.abs(best - anchor.lnum) then best = l end
+    end
+    return best
+end
+
+local function snapshot_folds(win, buf)
+    return vim.api.nvim_win_call(win, function()
+        local view = vim.fn.winsaveview()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local index = line_index(lines)
+        -- foldclosed() can't see closed folds nested in a closed fold, so
+        -- open each one found (outermost first) to look inside it, then
+        -- close them all again innermost first.
+        local closed = {}
+        local lnum = 1
+        while lnum <= #lines do
+            if vim.fn.foldclosed(lnum) == lnum then
+                table.insert(closed, lnum)
+                vim.cmd(lnum .. 'foldopen')
+            else
+                lnum = lnum + 1
+            end
+        end
+        for i = #closed, 1, -1 do vim.cmd(closed[i] .. 'foldclose') end
+        vim.fn.winrestview(view)
+
+        for i, l in ipairs(closed) do closed[i] = line_anchor(lines, index, l) end
+        return {
+            buf = buf,
+            tick = vim.b[buf].changedtick,
+            closed = closed,
+            cursor = line_anchor(lines, index, view.lnum),
+            cursor_level = vim.fn.foldlevel(view.lnum),
+            col = view.col,
+            curswant = view.curswant,
+            row = vim.fn.winline() - 1,
+        }
+    end)
+end
+
+local function restore_folds(win, snap)
+    vim.api.nvim_win_call(win, function()
+        local lines = vim.api.nvim_buf_get_lines(snap.buf, 0, -1, false)
+        local index = line_index(lines)
+        vim.cmd('silent! %foldopen!')
+        for i = #snap.closed, 1, -1 do
+            local lnum = find_anchor(index, snap.closed[i])
+            if lnum and pcall(vim.cmd, lnum .. 'foldclose')
+                and vim.fn.foldclosed(lnum) ~= lnum then
+                -- no fold starts there any more; don't close its parent
+                vim.cmd(lnum .. 'foldopen')
+            end
+        end
+        local lnum = find_anchor(index, snap.cursor) or math.min(snap.cursor.lnum, #lines)
+        -- pick the topline that puts the cursor back on its old screen row
+        local top = lnum
+        while top > 1 do
+            local above = vim.fn.foldclosed(top - 1)
+            above = above == -1 and top - 1 or above
+            local rows = vim.api.nvim_win_text_height(0, { start_row = above - 1, end_row = lnum - 2 }).all
+            if rows > snap.row then break end
+            top = above
+        end
+        vim.fn.winrestview({ lnum = lnum, col = snap.col, curswant = snap.curswant, topline = top })
+    end)
+end
+
+-- Folds are recomputed after the reload, maybe asynchronously (treesitter),
+-- so wait until a line that was in a fold is in one again (~1s at most).
+local function restore_when_folded(win, snap, tries)
+    if not vim.api.nvim_win_is_valid(win) or vim.api.nvim_win_get_buf(win) ~= snap.buf then return end
+    tries = tries or 0
+    local probe = snap.closed[1] or (snap.cursor_level > 0 and snap.cursor) or nil
+    local lnum = probe and find_anchor(line_index(vim.api.nvim_buf_get_lines(snap.buf, 0, -1, false)), probe)
+    local ready = not lnum or vim.api.nvim_win_call(win, function() return vim.fn.foldlevel(lnum) > 0 end)
+    if ready or tries >= 40 then
+        restore_folds(win, snap)
+    else
+        vim.defer_fn(function() restore_when_folded(win, snap, tries + 1) end, 25)
+    end
+end
+
+vim.api.nvim_create_autocmd({ 'BufReadPost', 'BufWritePost' }, {
+    callback = function(args) vim.b[args.buf].disk_mtime = disk_mtime(args.buf) end,
+})
+vim.api.nvim_create_autocmd('FileChangedShellPost', {
+    callback = function(args)
+        vim.b[args.buf].disk_mtime = disk_mtime(args.buf)
+        for win, snap in pairs(fold_snapshots) do
+            -- an unchanged changedtick means the reload was declined
+            if snap.buf == args.buf and vim.b[args.buf].changedtick ~= snap.tick then
+                vim.schedule(function() restore_when_folded(win, snap) end)
+            end
+        end
+    end,
+})
+
+vim.api.nvim_create_autocmd({ 'WinEnter', 'BufEnter', 'TermLeave', 'FocusGained' }, {
     callback = function()
-        if vim.fn.getcmdwintype() == '' then vim.cmd('checktime') end
+        if vim.fn.getcmdwintype() ~= '' then return end
+        fold_snapshots = {}
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+            local buf = vim.api.nvim_win_get_buf(win)
+            local mtime = vim.b[buf].disk_mtime
+            if vim.bo[buf].buftype == '' and vim.wo[win].foldenable
+                and vim.wo[win].foldmethod ~= 'manual'
+                and mtime and mtime ~= disk_mtime(buf) then
+                fold_snapshots[win] = snapshot_folds(win, buf)
+            end
+        end
+        vim.cmd('checktime')
     end,
 })
 
