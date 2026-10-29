@@ -1,31 +1,42 @@
--- markdown_wikilink.lua : complete Obsidian-style [[wikilinks]]
+-- markdown_wikilink.lua : Obsidian-style [[wikilinks]] in Markdown buffers
 --
--- Typing `[[` opens a menu of the Markdown notes under the cwd, the RECENT
--- most recently modified first. Typing on narrows it to the notes whose path
--- fuzzy matches the text, words in any order (matchfuzzy()). Accepting
--- (<C-y>, or <CR> on the preselected first item) inserts the note's name
--- without `.md`, or its path from the cwd when another note has the same name,
--- as Obsidian does, then steps over the closing `]]`, adding it if missing.
--- Completion stops at `|` (alias) and `#` (heading).
+-- Insert mode
+--   [[            menu of notes under the cwd, the RECENT newest first;
+--                 typing narrows it (fuzzy, words in any order)
+--   <C-x><C-u>    open the menu by hand inside `[[` (after <C-e>, or in a
+--                 link written earlier)
+--   <C-n> <C-p>   move in the menu      <C-y> (or <CR>)  accept
+--   <C-e>         close the menu
 --
--- gf and its variants (gF, <C-w>f, <C-w>F, <C-w><C-f>, <C-w>gf, <C-w>gF)
--- follow the wikilink under the cursor, in the same window, a split or a new
--- tab, and work as usual anywhere else, except that <C-w>F always splits
--- vertically in Markdown. A name is looked up in the
--- current note's folder, then the cwd, then anywhere under the cwd (the
--- shortest path wins); `Folder/Name` is matched at the end of a path, so a
--- partial path works too. `#Heading` (and `#^block`) jumps there after
--- opening; `[[#Heading]]` alone stays in the current note. gF and <C-w>gF
--- go to a place in the note, the way gF goes to a line: on a link without
--- `#Heading` they open the ,fH heading picker
--- (telescope-heading) in the note; cancelling it leaves you where gf would.
--- For a note that does not exist, a floating window offers to create it in
--- the cwd (or next to the current note for a `./` link), unsaved and
--- starting with a heading.
+-- Normal mode, on a wikilink (anywhere else: the built-in command)
+--   gf            open the note
+--   gF            open the note, then pick a heading (,fH picker)
+--   <C-w>f        open in a split       (also <C-w><C-f>)
+--   <C-w>F        open in a vertical split; off a link too, in Markdown
+--   <C-w>gf       open in a new tab
+--   <C-w>gF       open in a new tab, then pick a heading
 --
--- The notes are listed again in the background on every `[[` (and on gf
--- when the quick checks miss), so new notes show up and a big cwd (`~`)
--- never blocks; the listing stops after MAX_FILES notes or TIMEOUT ms.
+-- Completing
+--   Accepting inserts the note's name without `.md`, or its path from the
+--   cwd when another note has the same name, then steps over the closing
+--   `]]` (added if missing). In an existing link it replaces the rest of the
+--   old name and keeps an `|alias` or `#heading`.
+--
+-- Following
+--   A name is looked up next to the current note, then in the cwd, then
+--   anywhere under it (shortest path wins); `Folder/Name` also matches the
+--   end of a path. `#Heading` and `#^block` jump there; `[[#Heading]]` is a
+--   heading of the current note. The heading picker is skipped for a note
+--   without headings; cancelling it leaves you where gf would. A missing
+--   note gets a floating window offering to create it (c: create, q:
+--   cancel), in the cwd, or next to the current note for a `./` link.
+--
+-- Requirements and limits
+--   ripgrep lists the notes, in the background on every `[[` (and on gf
+--   when the quick checks miss), so new notes show up and a big cwd (`~`)
+--   never blocks; the listing stops after MAX_FILES notes or TIMEOUT ms.
+--   gF and <C-w>gF need telescope-heading; without it they are the
+--   built-ins (an error says so once per session).
 
 if vim.g.vscode then return end
 
@@ -104,6 +115,9 @@ end
 local session
 -- set from accepting an item until its `]]` is stepped over
 local accepting = false
+-- b:changedtick right after that: the change is ours, not typing, so it
+-- must not open the menu again (the cursor may still be inside the link)
+local accepted_tick
 
 local function stop()
     if not session then return end
@@ -121,22 +135,21 @@ local function moving(ctx)
     return item ~= nil and item.word == ctx.query
 end
 
-local function show(ctx)
-    if vim.fn.mode() ~= 'i' then return end
-    session.shown = ctx.query
+-- The menu items for the text typed after `[[`.
+local function items(query)
     local found
-    if vim.trim(ctx.query) == '' then
+    if vim.trim(query) == '' then
         found = vim.list_slice(session.notes, 1, RECENT)
     else
         found = {}
-        for _, path in ipairs(vim.fn.matchfuzzy(session.paths, ctx.query)) do
+        for _, path in ipairs(vim.fn.matchfuzzy(session.paths, query)) do
             found[#found + 1] = session.by_path[path]
             if #found >= MAX_ITEMS then break end
         end
     end
-    local items = {}
+    local list = {}
     for _, n in ipairs(found) do
-        items[#items + 1] = {
+        list[#list + 1] = {
             word = n.link,
             abbr = n.name,
             menu = n.dir ~= '.' and n.dir or nil,
@@ -145,18 +158,18 @@ local function show(ctx)
             user_data = 'wikilink',
         }
     end
-    vim.fn.complete(ctx.col, items)
+    return list
 end
 
-local function update()
-    if accepting then return end
-    local ctx = context()
-    if not ctx then return stop() end
-    if session and (session.row ~= ctx.row or session.col ~= ctx.col) then stop() end
-    if session then
-        if session.notes and not moving(ctx) then show(ctx) end
-        return
-    end
+local function show(ctx)
+    if vim.fn.mode() ~= 'i' then return end
+    session.shown = ctx.query
+    vim.fn.complete(ctx.col, items(ctx.query))
+end
+
+-- Start a session for the link at ctx: list the notes, then show the menu
+-- if the cursor is still in that link.
+local function start(ctx)
     local s = { row = ctx.row, col = ctx.col, cot = vim.bo[buf].completeopt }
     session = s
     -- first item preselected, so <CR> takes it; nothing inserted until then
@@ -170,6 +183,50 @@ local function update()
         if now and now.row == s.row and now.col == s.col then show(now) end
     end)
 end
+
+local function update()
+    if accepting or vim.api.nvim_buf_get_changedtick(buf) == accepted_tick then return end
+    local ctx = context()
+    if not ctx then return stop() end
+    if session and (session.row ~= ctx.row or session.col ~= ctx.col) then stop() end
+    if not session then return start(ctx) end
+    if session.notes and not moving(ctx) then show(ctx) end
+end
+
+-- <C-x><C-u> opens the menu by hand, e.g. after <C-e> or with the cursor
+-- moved into an existing link. Before the notes are listed it starts the
+-- listing and returns -3 (no menu yet); the menu comes up when it is done.
+local function completefunc(findstart, base)
+    if findstart == 1 then
+        local ctx = context()
+        if not ctx then return -3 end
+        if session and (session.row ~= ctx.row or session.col ~= ctx.col) then stop() end
+        if session and session.notes then return ctx.col - 1 end
+        if not session then start(ctx) end
+        return -3
+    end
+    if not (session and session.notes) then return {} end
+    session.shown = base
+    return items(base)
+end
+
+-- 'completefunc' takes a function name, not a closure: one global table
+-- passes each call on to the current buffer's function.
+_G.markdown_wikilink = _G.markdown_wikilink or {
+    buffers = {},
+    complete = function(findstart, base)
+        local f = _G.markdown_wikilink.buffers[vim.api.nvim_get_current_buf()]
+        if not f then return findstart == 1 and -3 or {} end
+        return f(findstart, base)
+    end,
+}
+_G.markdown_wikilink.buffers[buf] = completefunc
+vim.bo[buf].completefunc = 'v:lua.markdown_wikilink.complete'
+vim.api.nvim_create_autocmd('BufWipeout', {
+    group = group,
+    buffer = buf,
+    callback = function() _G.markdown_wikilink.buffers[buf] = nil end,
+})
 
 vim.api.nvim_create_autocmd({ 'TextChangedI', 'TextChangedP' }, {
     group = group,
@@ -188,10 +245,21 @@ vim.api.nvim_create_autocmd('CompleteDone', {
             accepting = false
             stop()
             local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-            if vim.api.nvim_get_current_line():sub(col + 1, col + 2) ~= ']]' then
+            local after = vim.api.nvim_get_current_line():sub(col + 1)
+            if not after:match('^[^%[%]]*%]%]') then
+                -- an open link: close it
                 vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, { ']]' })
+                vim.api.nvim_win_set_cursor(0, { row, col + 2 })
+            else
+                -- inside a closed link: the rest of the old name is replaced
+                -- too, an |alias or #heading is kept
+                local rest = after:match('^[^%[%]|#]*')
+                if #rest > 0 then vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col + #rest, { '' }) end
+                if after:sub(#rest + 1, #rest + 2) == ']]' then
+                    vim.api.nvim_win_set_cursor(0, { row, col + 2 })
+                end
             end
-            vim.api.nvim_win_set_cursor(0, { row, col + 2 })
+            accepted_tick = vim.api.nvim_buf_get_changedtick(buf)
         end)
     end,
 })
