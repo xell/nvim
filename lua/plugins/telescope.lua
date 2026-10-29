@@ -142,9 +142,12 @@ return {
                 },
             }
             vim.cmd[[
-            " with prefix ' without fuzzy
-            nnoremap <Leader>fg <cmd>Telescope grep_string search=<CR>
-            " https://github.com/nvim-telescope/telescope.nvim/issues/564#issuecomment-1173167550 allows regex
+            " ,fz: fuzzy over every line in the project (like fzf.vim :Rg); start with ' for exact match
+            " ,fG: prompt is passed to rg as a regex, not fuzzy; <C-Space> to fuzzy-refine the results
+            " both from https://github.com/nvim-telescope/telescope.nvim/issues/564#issuecomment-1173167550
+            nnoremap <Leader>fz <cmd>Telescope grep_string search=<CR>
+            " ,fg: nvALT-style live search of names + contents; start with < for the buffer's folder (lua/notegrep.lua)
+            nnoremap <Leader>fg <cmd>lua require('notegrep').open()<CR>
             nnoremap <Leader>fG <cmd>Telescope live_grep<CR>
             nnoremap <Leader>fp <cmd>Telescope find_files follow=true<CR>
             "nnoremap <Leader>ff <cmd>Telescope oldfiles<CR>
