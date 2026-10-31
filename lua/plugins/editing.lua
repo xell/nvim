@@ -499,6 +499,7 @@ return {
 
             { "<C-w>C", function() require("winbuf").close_buf() end, desc = "Close buffer (window)" },
             { "<C-S-w>", function() require("winbuf").close_split() end, desc = "Close split" },
+            { "<Leader>fB", function() vim.cmd("WinBuffers") end, desc = "Win Buffers" },
         },
     }, -- }}}
 
