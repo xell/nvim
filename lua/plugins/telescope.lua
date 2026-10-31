@@ -151,7 +151,9 @@ return {
             nnoremap <Leader>fG <cmd>Telescope live_grep<CR>
             nnoremap <Leader>fp <cmd>Telescope find_files follow=true<CR>
             "nnoremap <Leader>ff <cmd>Telescope oldfiles<CR>
-            nnoremap <leader>ff <cmd>Telescope frecency<CR>
+            "nnoremap <leader>ff <cmd>Telescope frecency<CR>
+            " ,ff: the 20 files opened last, then the rest by frecency score (lua/recentfiles.lua)
+            nnoremap <leader>ff <cmd>lua require('recentfiles').open()<CR>
             nnoremap <leader>fF <cmd>Telescope frecency workspace=CWD<CR>
             nnoremap <Leader>fb <cmd>Telescope buffers<CR>
             nnoremap <Leader>fh <cmd>Telescope help_tags<CR>
@@ -246,7 +248,9 @@ return {
     }, -- }}}
 
     -- https://github.com/nvim-telescope/telescope-frecency.nvim
+    -- https://github.com/xell/telescope-frecency.nvim
     { 'nvim-telescope/telescope-frecency.nvim', -- {{{
+        dev = true,
         cond = not vim.g.vscode,
         -- to prevent colorscheme highlight problem
         -- definition in the above
