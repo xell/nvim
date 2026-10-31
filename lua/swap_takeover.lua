@@ -105,6 +105,7 @@ local function find_buf(fname)
     end
     return nil
 end
+M.find_buf = find_buf
 
 -- Remote-side: save the buffer for fname if it's modified. Called via luaeval
 -- from the *other* process, so it executes in the target instance.
@@ -184,7 +185,10 @@ function M.handle_swap_exists()
         vim.fn.fnamemodify(target_file, ':~'),
         info.pid or '?', info.user or '?', info.host or '?'
     )
-    local choice = vim.fn.confirm(prompt, '&Let go\n&Readonly\n&Takeover', 1)
+    -- Set by a caller that already knows it wants the file (lua/inbox.lua):
+    -- take over without asking. A stale swapfile still asks, below.
+    local choice = vim.g.swap_takeover_auto and 3
+        or vim.fn.confirm(prompt, '&Let go\n&Readonly\n&Takeover', 1)
 
     if choice == 0 or choice == 1 then
         vim.v.swapchoice = 'q' -- let go: don't open here, leave the other process alone
@@ -264,8 +268,9 @@ function M.handle_swap_exists()
         return
     end
 
-    vim.notify('swap_takeover: took over ' .. vim.fn.fnamemodify(target_file, ':~') .. ' from pid ' .. pid,
-        vim.log.levels.INFO)
+    -- Scheduled: a message during :edit can otherwise land as a hit-enter prompt.
+    local msg = 'swap_takeover: took over ' .. vim.fn.fnamemodify(target_file, ':~') .. ' from pid ' .. pid
+    vim.schedule(function() vim.notify(msg, vim.log.levels.INFO) end)
     vim.v.swapchoice = 'e'
 end
 

@@ -736,6 +736,10 @@ vim.keymap.set('v', "<Leader>'", [[<ESC>`>a'<ESC>`<i'<ESC>`>ll]])
 -- https://vi.stackexchange.com/questions/25130/close-buffer-in-the-other-instance
 -- https://github.com/vim/vim/blob/master/runtime/pack/dist/opt/editexisting/plugin/editexisting.vim
 -- vim.cmd.runtime('macros/editexisting.vim')
+-- Neovim 0.10+ ships its own SwapExists handler that picks (E)dit and prints
+-- "W325: Ignoring swapfile ..." for a live Nvim owner. swap_takeover handles
+-- every case itself, and that extra line causes a hit-enter prompt.
+pcall(vim.api.nvim_del_augroup_by_name, 'nvim.swapfile')
 vim.api.nvim_create_autocmd({ 'SwapExists' }, {
     callback = require('swap_takeover').handle_swap_exists,
 })
@@ -1137,6 +1141,13 @@ vim.api.nvim_create_user_command("DeleteOtherBuffers", function()
     end
   end
 end, {})
+
+-- Inbox
+-- Read on every :InboxAdd, so `:let g:inbox_max_lines = 300` works live.
+vim.g.inbox_max_lines = 200                 -- soft cap before the next Inbox NN.md
+vim.g.inbox_date_format = '%Y-%m-%d %H:%M'  -- os.date() format of the entry heading
+vim.g.inbox_open_cmd = 'tabedit'            -- when the current window is in use: split, vsplit, edit
+vim.keymap.set('n', '<Leader>i', '<Cmd>InboxAdd<CR>', { desc = 'Add to Inbox' })
 
 -- }}}
 
