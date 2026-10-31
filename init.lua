@@ -296,10 +296,37 @@ vim.keymap.set('t', '<M-->', '<C-\\><C-n><C-w>-')
 vim.keymap.set('t', '<M-=>', '<C-\\><C-n><C-w>+')
 vim.keymap.set('t', '<M-,>', '<C-\\><C-n><C-w><')
 vim.keymap.set('t', '<M-.>', '<C-\\><C-n><C-w>>')
-vim.keymap.set("n", "<down>", ":resize +1<cr>")
-vim.keymap.set("n", "<up>", ":resize -1<cr>")
-vim.keymap.set("n", "<right>", ":vertical resize +1<cr>")
-vim.keymap.set("n", "<left>", ":vertical resize -1<cr>")
+-- Arrows move the separator in the arrow's direction. A window that has a
+-- neighbour below (or to the right) owns that separator; the bottom-most (or
+-- right-most) one moves the separator on the other side, so the sign flips.
+local function move_separator(dir, vertical)
+    local after, before = vertical and 'l' or 'j', vertical and 'h' or 'k'
+    local cur = vim.fn.winnr()
+    local has_after = vim.fn.winnr(after) ~= cur
+    -- no split along this axis: nothing to move (and avoid touching cmdheight)
+    if not has_after and vim.fn.winnr(before) == cur then return end
+    local cmd = (vertical and 'vertical ' or '') .. 'resize ' .. (dir * (has_after and 1 or -1) > 0 and '+1' or '-1')
+    -- The edge on the other side must stay put. When the windows past the
+    -- separator are already at their minimum, Vim takes the room from the other
+    -- side instead, so undo that step and stop.
+    local function far_edge()
+        local pos = vim.fn.win_screenpos(0)[vertical and 2 or 1]
+        if has_after then return pos end
+        return pos + (vertical and vim.fn.winwidth(0) or vim.fn.winheight(0))
+    end
+    for _ = 1, vim.v.count1 do
+        local edge, restore = far_edge(), vim.fn.winrestcmd()
+        vim.cmd(cmd)
+        if far_edge() ~= edge then
+            vim.cmd(restore)
+            break
+        end
+    end
+end
+vim.keymap.set("n", "<down>", function() move_separator(1, false) end)
+vim.keymap.set("n", "<up>", function() move_separator(-1, false) end)
+vim.keymap.set("n", "<right>", function() move_separator(1, true) end)
+vim.keymap.set("n", "<left>", function() move_separator(-1, true) end)
 
 -- <M-n> goes to the n window
 for i = 1, 9 do
@@ -342,7 +369,52 @@ vim.keymap.set('n', '<Leader>V', vim.cmd.vnew, { desc = 'split L/R new' })
 
 -- close
 vim.keymap.set('n', '<Leader>c', '<C-w>c', { desc = 'Close current window' })
+-- :bdelete that keeps the layout: every window showing the buffer first
+-- switches to its alternate buffer, else the most recently used listed one,
+-- else a new empty one
+vim.keymap.set('n', '<Leader>C', function()
+    local buf = vim.api.nvim_get_current_buf()
+    -- check what :bdelete would refuse before touching any window
+    if vim.bo[buf].modified then
+        vim.notify('No write since last change', vim.log.levels.ERROR)
+        return
+    end
+    local job = vim.bo[buf].buftype == 'terminal' and vim.fn.jobwait({ vim.bo[buf].channel }, 0)[1] == -1
+    if job and vim.fn.confirm('Kill the running job in ' .. vim.api.nvim_buf_get_name(buf) .. '?', '&Yes\n&No') ~= 1 then
+        return
+    end
+    local fallback, lastused = nil, -1
+    for _, info in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
+        if info.bufnr ~= buf and info.lastused > lastused then
+            fallback, lastused = info.bufnr, info.lastused
+        end
+    end
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+        vim.api.nvim_win_call(win, function()
+            local alt = vim.fn.bufnr('#')
+            if alt > 0 and alt ~= buf and vim.bo[alt].buflisted then
+                vim.cmd.buffer(alt)
+            elseif fallback then
+                vim.cmd.buffer(fallback)
+            else
+                -- one empty buffer shared by all such windows
+                vim.cmd.enew()
+                fallback = vim.api.nvim_get_current_buf()
+            end
+        end)
+    end
+    vim.cmd.bdelete({ args = { buf }, bang = job })
+end, { desc = 'Delete buffer, keep window' })
 vim.keymap.set('n', '<Leader>o', '<C-w>o', { desc = 'Close other windows' })
+vim.keymap.set('n', '<Leader>O', function()
+    local cur = vim.api.nvim_get_current_win()
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if win ~= cur and vim.bo[vim.api.nvim_win_get_buf(win)].buftype ~= 'terminal' then
+            -- pcall: like <C-w>o, leave a window whose buffer can't be abandoned
+            pcall(vim.api.nvim_win_close, win, false)
+        end
+    end
+end, { desc = 'Close other windows but terminals' })
 
 -- open window arrangment
 vim.keymap.set('n', '<Leader>wh', function() vim.cmd [[topleft vertical split]] end, { desc = 'Split far left' })
