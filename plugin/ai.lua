@@ -156,5 +156,24 @@ vim.api.nvim_create_user_command('SendToTerm', function()
   AiSendToTerm(result)
 end, { range = true })
 
-vim.keymap.set('x', '<leader>cs', ':SendToTerm<CR>', { desc = 'Send selection to terminal' })
+--- Send the last visual selection to Claude Code. Linewise ('V') and
+--- blockwise selections go through brygga as an @-mention when a Claude
+--- client is connected, then focus moves to this tabpage's terminal if it
+--- has one. Charwise ('v') selections, and any selection while brygga has
+--- no client, fall back to :SendToTerm, which quotes the selected text.
+vim.api.nvim_create_user_command('SendRef', function(opts)
+  local ok, brygga = pcall(require, 'brygga')
+  if vim.fn.visualmode() ~= 'v' and ok and brygga.client_count() > 0 then
+    brygga.send(vim.api.nvim_buf_get_name(0), opts.line1, opts.line2)
+    local win = ai_terminal_win(0)
+    if win then
+      vim.api.nvim_set_current_win(win)
+      vim.cmd('startinsert')
+    end
+    return
+  end
+  vim.cmd('SendToTerm')
+end, { range = true })
+
+vim.keymap.set('x', '<leader>cs', ':SendRef<CR>', { desc = 'Send selection to Claude' })
 

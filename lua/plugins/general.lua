@@ -217,4 +217,17 @@ return {
         end
     }, -- }}}
 
+    -- https://github.com/ThorstenRhau/brygga.nvim
+    { 'ThorstenRhau/brygga.nvim', -- {{{
+        version = '*',
+        opts = {},
+        config = function ()
+            require('brygga').setup({
+                -- Start the server when setup() runs.
+                auto_start = true,
+            })
+            vim.keymap.set('x', '<leader>cS', ':Brygga send<CR>', { desc = 'Send selection to Claude' })
+        end,
+    }, -- }}}
+
 }
