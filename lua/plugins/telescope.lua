@@ -168,6 +168,8 @@ return {
             nnoremap <Leader>fn :Telescope find_files search_dirs=<C-R>=g:pkm_base<CR><CR>
             nnoremap <Leader>fl :Telescope current_buffer_fuzzy_find<CR>
             nnoremap <Leader>fR :Telescope resume<CR>
+            " ,fs: other running Nvim sessions; <CR> brings up its gneovim window (a headless one opens in a gui-tab), else :connect (<C-x> :connect!) (lua/serverlist.lua)
+            nnoremap <Leader>fs <cmd>lua require('serverlist').open()<CR>
             " nmap <Leader>fl :BLines<CR>
             " nmap <Leader>fL :Lines<CR>
             " nmap <Leader>fw :Windows<CR>

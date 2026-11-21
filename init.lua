@@ -865,7 +865,10 @@ vim.api.nvim_create_autocmd("TermOpen", {
 })
 
 -- Copy a gneovim:// link to the current file to the system clipboard.
-vim.api.nvim_create_user_command('GneovimCopyLink', function()
+-- With a range (:'<,'>GneovimCopyLink, :12GneovimCopyLink) the link also
+-- carries a line. The URL has no range form, only :<line>[:<col>], so it
+-- points at the range's first line.
+vim.api.nvim_create_user_command('GneovimCopyLink', function(opts)
     local path = vim.api.nvim_buf_get_name(0)
     if path == '' then
         vim.notify('GneovimCopyLink: buffer has no file name', vim.log.levels.WARN)
@@ -873,12 +876,17 @@ vim.api.nvim_create_user_command('GneovimCopyLink', function()
     end
     path = vim.fn.fnamemodify(path, ':p')
     -- Percent-encode every byte except unreserved characters and '/'.
+    -- This also encodes a ':' in the path, so the ':<line>' below can't be
+    -- mistaken for part of the file name.
     local url = 'gneovim://file' .. (path:gsub('[^A-Za-z0-9._~/-]', function(c)
         return string.format('%%%02X', c:byte())
     end))
+    if opts.range > 0 then
+        url = url .. ':' .. opts.line1
+    end
     vim.fn.setreg('+', url)
     vim.notify('Copied ' .. url)
-end, { desc = 'Copy a gneovim:// link to the current file' })
+end, { range = true, desc = 'Copy a gneovim:// link to the current file' })
 
 -- Auto read/load buffer after modified externally
 --
