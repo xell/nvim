@@ -1,10 +1,5 @@
 -- vim:
 
-vim.g.pkm_base = vim.fn.fnameescape(vim.fn.glob('~/Documents/My'))
-vim.g.project_bases = {
-    vim.g.pkm_base,
-    vim.fn.fnameescape(vim.fn.glob('~/.config/nvim')), }
-
 vim.keymap.set('n', '<Leader>N', function()
     if vim.bo.modified == false and
         vim.fn.getline('1') == '' and

@@ -88,7 +88,7 @@ function s:MyTabLabel(n)
     else
         let res .= '%#TabLine#'
     endif
-    let res .= ' ' . string(a:n) . ' '
+    let res .= ' ' . (a:n <= 9 ? strcharpart('１２３４５６７８９', a:n - 1, 1) : string(a:n)) . ' '
     let bufnr = buflist[winnr - 1]
     if getbufvar(bufnr, '&modified') == 1
         let res .= '*'

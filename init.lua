@@ -248,6 +248,12 @@ vim.cmd [[
 -- }}}
 
 -- Special settings {{{
+
+vim.g.pkm_base = vim.fn.fnameescape(vim.fn.glob('~/Documents/My'))
+vim.g.project_bases = {
+    vim.g.pkm_base,
+    vim.fn.fnameescape(vim.fn.glob('~/.config/nvim')), }
+
 vim.g.netrw_liststyle = 3
 vim.g.netrw_keepdir = 0
 
