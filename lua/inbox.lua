@@ -32,7 +32,7 @@ local function max_lines() return vim.g.inbox_max_lines or 200 end
 local function date_format() return vim.g.inbox_date_format or '%Y-%m-%d %H:%M' end
 local function open_cmd() return vim.g.inbox_open_cmd or 'tabedit' end
 
--- vim.g.pkm_base is fnameescape()d for Ex commands (plugin/ai.lua); undo that
+-- vim.g.pkm_base is fnameescape()d for Ex commands (init.lua); undo that
 -- for file system calls.
 local function inbox_dir()
     local base = vim.g.pkm_base:gsub('\\(.)', '%1')

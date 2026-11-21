@@ -21,7 +21,7 @@ end
 --- Resolve `filepath` against vim.g.project_bases, returning either the
 --- path relative to the matching base, or the absolute path if no base
 --- matches. Entries in vim.g.project_bases are expected to be
---- fnameescape()-d absolute paths (as produced above via fnameescape() +
+--- fnameescape()-d absolute paths (as set in init.lua via fnameescape() +
 --- glob()).
 local function ai_relative_path(filepath)
   for _, base in ipairs(vim.g.project_bases or {}) do
