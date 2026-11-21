@@ -230,4 +230,32 @@ return {
         end,
     }, -- }}}
 
+    -- https://github.com/smart-splits-nvim/smart-splits.nvim
+    { 'smart-splits-nvim/smart-splits.nvim', -- {{{
+        version = '^3.0.0',
+        lazy = false,
+        dependencies = { {
+                'smart-splits-nvim/backend-ghostty',
+                main = 'smart-splits-backend-ghostty',
+                opts = {}
+        }, },
+        opts = {
+            mux = { backend = 'smart-splits-backend-ghostty' },
+            move = { at_edge = 'stop' },
+        },
+        config = function(_, opts)
+            require('smart-splits').setup(opts)
+            -- <M-h/j/k/l>: move between windows; at Neovim's edge, smart-splits crosses into the Ghostty pane
+            local dirs = { h = 'left', j = 'down', k = 'up', l = 'right' }
+            for c, dir in pairs(dirs) do
+                vim.keymap.set('n', '<M-' .. c .. '>', function()
+                    local ok, splits = pcall(require, 'smart-splits')
+                    if ok then splits['move_cursor_' .. dir]() else vim.cmd.wincmd(c) end
+                end)
+                -- leave Terminal mode, then run the Normal mode mapping above
+                vim.keymap.set('t', '<M-' .. c .. '>', '<C-\\><C-N><M-' .. c .. '>', { remap = true })
+            end
+        end,
+    }, -- }}}
+
 }

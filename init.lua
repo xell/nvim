@@ -334,12 +334,6 @@ for i = 1, 9 do
     vim.keymap.set('t', '<M-' .. i .. '>', '<C-\\><C-N>' .. i .. '<c-w><c-w>')
 end
 
--- <M-h/j/k/l>
-for c in ('hjkl'):gmatch '.' do
-    vim.keymap.set('t', '<M-' .. c .. '>', '<C-\\><C-N><C-w>' .. c)
-    vim.keymap.set('n', '<M-' .. c .. '>', '<C-w>' .. c)
-end
-
 -- <Tab> to jump between two recent windows
 vim.keymap.set('n', '<Tab>', function()
     local ori_win_nr = vim.fn.winnr() -- vim.api.nvim_win_get_number(0)
@@ -1232,6 +1226,26 @@ vim.keymap.set('ca', 'ss', function()
 end)
 vim.keymap.set('ia', 'xdate', '<C-r>=strftime("%Y-%m-%d %H:%M:%S")<CR>')
 -- }}}
+
+-- Ghostty visualisation
+-- Vim logo + file name + modified flag in the title bar, only in a Ghostty pane (not tmux, not a GUI)
+vim.api.nvim_create_autocmd('UIEnter', {
+    callback = function()
+        local ui = vim.api.nvim_list_uis()[1]
+        local client = ui and vim.api.nvim_get_chan_info(ui.chan).client
+        if vim.env.TERM_PROGRAM == 'ghostty' and not vim.env.TMUX
+            and client and client.name == 'nvim-tui' then
+            vim.o.titlestring = ' %t%( %M%)'
+        end
+    end,
+})
+-- Tint this Ghostty pane's background (visible as a frame in the padding) while Neovim runs
+if vim.env.TERM_PROGRAM == 'ghostty' and not vim.env.TMUX then
+    local tint = 'f4faff'
+    local function set(on) vim.api.nvim_ui_send(on and ('\027]11;' .. tint .. '\007') or '\027]111\007') end
+    vim.api.nvim_create_autocmd({ 'VimEnter', 'VimResume' }, { callback = function() set(true) end })
+    vim.api.nvim_create_autocmd({ 'VimLeavePre', 'VimSuspend' }, { callback = function() set(false) end })
+end
 
 require('lsp')
 
