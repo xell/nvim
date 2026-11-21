@@ -534,7 +534,7 @@ vim.o.foldlevelstart = 99
 -- vim.o.foldopen = 'all'
 vim.o.foldopen = 'block,hor,mark,percent,quickfix,search,tag,undo,insert'
 
--- toggle fold
+-- toggle fold {{{
 --
 -- foldexpr (e.g. treesitter's markdown query) deliberately flattens the
 -- blank separator line before the next heading/list/etc. to an outer
@@ -602,15 +602,27 @@ local function toggle_fold()
     end
     target = target or probe
 
+    -- Nothing to toggle here (preamble above the first heading, frontmatter,
+    -- a file with no folds yet): say so quietly instead of raising E490.
+    if vim.fn.foldlevel(target) == 0 then
+        vim.api.nvim_echo({ { 'No fold here', 'Comment' } }, false, {})
+        return
+    end
+
     local closed = vim.fn.foldclosed(target)
-    if closed > 0 then
-        vim.cmd(closed .. 'foldopen')
-    else
-        vim.cmd(target .. 'foldclose')
+    local cmd = closed > 0 and (closed .. 'foldopen') or (target .. 'foldclose')
+    local ok, err = pcall(vim.cmd, cmd)
+    if not ok then
+        -- Keep only the "E490: No fold found" part, on one line, so it
+        -- never triggers the hit-enter prompt with a stack traceback.
+        local msg = tostring(err):match('(E%d+:.*)$') or tostring(err)
+        vim.api.nvim_echo({ { msg, 'WarningMsg' } }, false, {})
     end
 end
 
 vim.keymap.set('n', '<Space>', toggle_fold, { silent = true, desc = 'Toggle the nearest heading fold, transparent to gaps/lists/blockquotes' })
+
+-- }}}
 
 vim.keymap.set('n', 'z[', function()
     local current_foldlevel = vim.call('foldlevel', '.')
@@ -740,6 +752,21 @@ vim.keymap.set('n', '<C-u>', '<C-u>zz', { desc = 'Scroll upwards' })
 vim.keymap.set('n', 'n', 'nzzzv', { desc = 'Next result' })
 vim.keymap.set('n', 'N', 'Nzzzv', { desc = 'Previous result' })
 
+-- search :match
+local function match_jump(flags)
+    for _, m in ipairs(vim.fn.getmatches()) do
+        if m.id == 1 then
+            vim.fn.search(m.pattern, flags)
+            return
+        end
+    end
+    vim.notify('No :match active')
+end
+
+-- or add to the jumplist by match_jump('s')
+vim.keymap.set('n', ']h', function() match_jump('') end)
+vim.keymap.set('n', '[h', function() match_jump('b') end)
+
 -- Indent while remaining in visual mode.
 vim.keymap.set('v', '<', '<gv')
 vim.keymap.set('v', '>', '>gv')
@@ -826,9 +853,6 @@ vim.api.nvim_create_user_command('ToggleFocusLost', function()
     focuslost_stopinsert = not focuslost_stopinsert
     vim.notify('FocusLost stopinsert: ' .. (focuslost_stopinsert and 'on' or 'off'))
 end, { desc = 'Toggle stopinsert on FocusLost' })
-
--- curly quote
-vim.keymap.set('i', "<M-'>", '’')
 
 -- i_CTRL-u stopps at column 1
 vim.keymap.set('i', '<C-u>', function()
